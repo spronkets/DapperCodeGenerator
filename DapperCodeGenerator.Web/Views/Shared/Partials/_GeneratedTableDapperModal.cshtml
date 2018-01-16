@@ -1,0 +1,28 @@
+﻿@using DapperCodeGenerator.Core.Generators
+@model DapperCodeGenerator.Core.Models.DatabaseTable
+
+@{
+    var modalId = $"TableDapperModal_{Guid.NewGuid()}";
+}
+
+<button type="button" class="btn btn-sm btn-warning" title="@Model.TableName Dapper" data-toggle="modal" data-target="#@modalId">Dapper</button>
+
+<div id="@modalId" class="modal fade" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Model.DatabaseName Database &gt; <strong>@Model.TableName</strong> Dapper</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h5><code id="@modalId-data-model-name">@{@Model.DatabaseName}Repository.cs</code></h5>
+                <pre><code id="@modalId-data-model-code">@DapperGenerator.GenerateDapperFromTable(Model)</code></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

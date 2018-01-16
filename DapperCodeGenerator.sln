@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2020
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DapperCodeGenerator.Web", "DapperCodeGenerator.Web\DapperCodeGenerator.Web.csproj", "{DA9A2FEC-62C0-40E3-B479-C0EA155800A7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DapperCodeGenerator.Core", "DapperCodeGenerator.Core\DapperCodeGenerator.Core.csproj", "{914719B8-7633-40C5-B156-2A5BE90D1F74}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FBE92A97-8C77-4B4E-808D-6DBB89983A27}"
+	ProjectSection(SolutionItems) = preProject
+		global.json = global.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DA9A2FEC-62C0-40E3-B479-C0EA155800A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA9A2FEC-62C0-40E3-B479-C0EA155800A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA9A2FEC-62C0-40E3-B479-C0EA155800A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA9A2FEC-62C0-40E3-B479-C0EA155800A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{914719B8-7633-40C5-B156-2A5BE90D1F74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{914719B8-7633-40C5-B156-2A5BE90D1F74}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{914719B8-7633-40C5-B156-2A5BE90D1F74}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{914719B8-7633-40C5-B156-2A5BE90D1F74}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D4CE15C5-261B-4C16-98AB-22D0CCB36509}
+	EndGlobalSection
+EndGlobal
