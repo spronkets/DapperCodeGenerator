@@ -9,6 +9,6 @@ namespace DapperCodeGenerator.Core.Models
         public string DatabaseName { get; set; }
         public string TableName { get; set; }
         
-        public List<DatabaseTableColumn> Columns { get; set; }
+        public List<DatabaseTableColumn> Columns { get; set; } = new List<DatabaseTableColumn>();
     }
 }

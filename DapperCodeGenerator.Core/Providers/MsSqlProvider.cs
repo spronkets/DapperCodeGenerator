@@ -96,14 +96,20 @@ namespace DapperCodeGenerator.Core.Providers
         protected override IEnumerable<DatabaseTableColumn> GetDatabaseTableColumns(string databaseName, string tableName)
         {
             DataTable selectedDatabaseTableColumns = null;
+
             DataTable selectedDatabaseTablePrimaryColumns = null;
             try
             {
                 using (var db = new SqlConnection($"{connectionStringBuilder};Initial Catalog={databaseName};"))
                 {
                     db.Open();
-                    selectedDatabaseTableColumns = db.GetSchema("Columns", new[] { databaseName, null, tableName });
-                    selectedDatabaseTablePrimaryColumns = db.GetSchema("IndexColumns", new[] { databaseName, null, tableName });
+                    var columnRestrictions = new string[3];
+                    columnRestrictions[0] = databaseName;
+                    columnRestrictions[2] = tableName;
+
+                    selectedDatabaseTableColumns = db.GetSchema("Columns", columnRestrictions);
+
+                    selectedDatabaseTablePrimaryColumns = db.GetSchema("IndexColumns", columnRestrictions);
                     db.Close();
                 }
             }
@@ -123,14 +129,6 @@ namespace DapperCodeGenerator.Core.Providers
                     var maxLengthStr = columnRow.ItemArray[8].ToString();
                     int.TryParse(maxLengthStr, out var maxLength);
 
-                    var primaryKey = false;
-                    if (selectedDatabaseTablePrimaryColumns != null)
-                    {
-                        primaryKey = selectedDatabaseTablePrimaryColumns.Rows.Cast<DataRow>()
-                            .Select(primaryColumnRow => primaryColumnRow.ItemArray[6].ToString())
-                            .Any(primaryColumnName => primaryColumnName == columnName);
-                    }
-                    
                     var column = new DatabaseTableColumn
                     {
                         ConnectionType = DbConnectionTypes.MsSql,
@@ -140,9 +138,30 @@ namespace DapperCodeGenerator.Core.Providers
                         DataType = dataType,
                         Type = type,
                         TypeNamespace = type.Namespace,
-                        MaxLength = maxLength,
-                        PrimaryKey = primaryKey
+                        MaxLength = maxLength
                     };
+
+                    if (selectedDatabaseTablePrimaryColumns != null)
+                    {
+                        foreach (DataRow indexColumnRow in selectedDatabaseTablePrimaryColumns.Rows)
+                        {
+                            var indexId = indexColumnRow[2].ToString();
+                            var indexColumnName = indexColumnRow[6].ToString();
+
+                            if (indexColumnName == columnName)
+                            {
+                                if (indexId.IndexOf("PK_") != -1)
+                                {
+                                    column.PrimaryKeys.Add(indexId);
+                                }
+                                else
+                                {
+                                    column.UniqueKeys.Add(indexId);
+                                }
+                            }
+                        }
+                    }
+
                     yield return column;
                 }
             }

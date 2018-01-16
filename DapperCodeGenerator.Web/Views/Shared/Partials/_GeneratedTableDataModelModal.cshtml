@@ -36,9 +36,17 @@
                                 <th scope="row">@(c + 1)</th>
                                 <td>
                                     @column.ColumnName
-                                    @if (column.PrimaryKey)
+                                    @if (column.IsPrimaryKey)
                                     {
-                                        <i class="material-icons md-18 text-warning align-middle" title="@column.ColumnName is part of the Primary Key/Index for @Model.TableName">vpn_key</i>
+                                        <i class="material-icons md-18 text-warning align-middle" title="@column.ColumnName is part of the @(string.Join(", ", column.PrimaryKeys)) Primary Key(s) for @column.TableName">vpn_key</i>
+                                    }
+                                    @if (column.IsForeignKey)
+                                    {
+                                        <i class="material-icons md-18 text-danger align-middle" title="@column.ColumnName is part of the @(string.Join(", ", column.ForeignKeys)) Foreign Key(s) for @column.TableName">vpn_key</i>
+                                    }
+                                    @if (column.IsUniqueKey)
+                                    {
+                                        <i class="material-icons md-18 text-muted align-middle" title="@column.ColumnName is part of the @(string.Join(", ", column.UniqueKeys)) Unique Key(s)/Indexes for @column.TableName">vpn_key</i>
                                     }
                                 </td>
                                 <td>

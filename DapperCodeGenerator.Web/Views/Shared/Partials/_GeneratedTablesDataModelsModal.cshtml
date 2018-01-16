@@ -25,7 +25,7 @@
                             var table = Model.Tables[t];
                             var tableTabKey = $"{modalId}-{table.TableName.ToLower()}";
 
-                        <a class="nav-link md-18@(t == 0 ? " active" : "")" id="@tableTabKey-tab" data-toggle="tab" href="#@tableTabKey" role="tab" aria-controls="@tableTabKey" aria-selected="@(t == 0 ? "true" : "false")">@table.TableName</a>
+                            <a class="nav-link md-18@(t == 0 ? " active" : "")" id="@tableTabKey-tab" data-toggle="tab" href="#@tableTabKey" role="tab" aria-controls="@tableTabKey" aria-selected="@(t == 0 ? "true" : "false")">@table.TableName</a>
                         }
                     </nav>
                     <div class="tab-content" id="@modalId-tabs-content">
@@ -34,50 +34,58 @@
                             var table = Model.Tables[t];
                             var tableTabKey = $"{modalId}-{table.TableName.ToLower()}";
 
-                        <div class="tab-pane fade@(t == 0 ? " show active" : "")" id="@tableTabKey" role="tabpanel" aria-labelledby="@tableTabKey-tab">
-                            <h4>@{@table.TableName} Data Model</h4>
+                            <div class="tab-pane fade@(t == 0 ? " show active" : "")" id="@tableTabKey" role="tabpanel" aria-labelledby="@tableTabKey-tab">
+                                <h4>@{@table.TableName} Data Model</h4>
 
-                            <table class="table table-striped table-bordered table-hover">
-                                <thead class="thead-light">
-                                    <tr>
-                                        <th scope="col">#</th>
-                                        <th scope="col">Column Name</th>
-                                        <th scope="col">Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @for (var c = 0; c < table.Columns.Count; c++)
-                                    {
-                                        var column = table.Columns[c];
+                                <table class="table table-striped table-bordered table-hover">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th scope="col">#</th>
+                                            <th scope="col">Column Name</th>
+                                            <th scope="col">Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (var c = 0; c < table.Columns.Count; c++)
+                                        {
+                                            var column = table.Columns[c];
 
-                                    <tr>
-                                        <th scope="row">@(c + 1)</th>
-                                        <td>
-                                            @column.ColumnName
-                                            @if (column.PrimaryKey)
-                                            {
-                                            <i class="material-icons md-18 text-warning align-middle" title="@column.ColumnName is part of the Primary Key/Index for @table.TableName">vpn_key</i>
-                                            }
-                                        </td>
-                                        <td>
-                                            @column.Type.GetNameForCoding()
-                                            <span class="text-secondary">
-                                                <small>
-                                                    @column.DataType
-                                                    @if (column.MaxLength > 0)
+                                            <tr>
+                                                <th scope="row">@(c + 1)</th>
+                                                <td>
+                                                    @column.ColumnName
+                                                    @if (column.IsPrimaryKey)
                                                     {
-                                                    <text>(@column.MaxLength)</text>
+                                                        <i class="material-icons md-18 text-warning align-middle" title="@column.ColumnName is part of the @(string.Join(", ", column.PrimaryKeys)) Primary Key(s) for @column.TableName">vpn_key</i>
                                                     }
-                                                </small>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    }
-                                </tbody>
-                            </table>
-                            <h5><code id="@modalId-data-model-name">@{@table.TableName}DataModel.cs</code></h5>
-                            <pre><code id="@modalId-data-model-code">@DataModelGenerator.GenerateDataModelFromTable(table)</code></pre>
-                        </div>
+                                                    @if (column.IsForeignKey)
+                                                    {
+                                                        <i class="material-icons md-18 text-danger align-middle" title="@column.ColumnName is part of the @(string.Join(", ", column.ForeignKeys)) Foreign Key(s) for @column.TableName">vpn_key</i>
+                                                    }
+                                                    @if (column.IsUniqueKey)
+                                                    {
+                                                        <i class="material-icons md-18 text-muted align-middle" title="@column.ColumnName is part of the @(string.Join(", ", column.UniqueKeys)) Unique Key(s)/Indexes for @column.TableName">vpn_key</i>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @column.Type.GetNameForCoding()
+                                                    <span class="text-secondary">
+                                                        <small>
+                                                            @column.DataType
+                                                            @if (column.MaxLength > 0)
+                                                            {
+                                                                <text>(@column.MaxLength)</text>
+                                                            }
+                                                        </small>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                <h5><code id="@modalId-data-model-name">@{@table.TableName}DataModel.cs</code></h5>
+                                <pre><code id="@modalId-data-model-code">@DataModelGenerator.GenerateDataModelFromTable(table)</code></pre>
+                            </div>
                         }
                     </div>
                 </div>
