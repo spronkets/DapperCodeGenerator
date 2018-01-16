@@ -8,13 +8,13 @@ This is currently being worked on. Use with knowledge that it may be unstable an
 2. Open the solution file (DapperCodeGenerator.sln) in Visual Studio 2017
 3. Make sure the Web project is set as the startup project
 4. Start/run with IIS
-⋅⋅* I run it with IIS Express from Visual Studio 2017, you can run it however you want
+  * I run it with IIS Express from Visual Studio 2017, you can run it however you want
 5. Navigate to the site
 6. Select the Connection Type
-⋅⋅* If you want support for Oracle or other DB types feel free to make a PR and/or submit a ticket, just know I won't prioritize it
+  * If you want support for Oracle or other DB types feel free to make a PR and/or submit a ticket, just know I won't prioritize it
 7. Enter a valid Connection String
 8. Press the "Connect" button
-⋅⋅* If you get messages about there not being any databases, confirm your Connection Type and Connection String
+  * If you get messages about there not being any databases, confirm your Connection Type and Connection String
 9. Select any database you wish to generate code for
 10. A table should be populated with a list of tables for the database you selected, click the "Data Model" or "Dapper" buttons to the right to generate code
 
