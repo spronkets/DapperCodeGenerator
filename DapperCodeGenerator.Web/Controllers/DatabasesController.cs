@@ -70,6 +70,8 @@ namespace DapperCodeGenerator.Web.Controllers
                     return "Data Source=localhost;Integrated Security=True;";
                 case DbConnectionTypes.Postgres:
                     return "Server=localhost;Port=5432;User Id=postgres;Password=postgres;";
+                case DbConnectionTypes.Oracle:
+                    return "Data Source=127.0.0.1:1521/xe;User Id=oracle;Password=oracle;";
                 default:
                     return null;
             }
@@ -85,6 +87,9 @@ namespace DapperCodeGenerator.Web.Controllers
                     break;
                 case DbConnectionTypes.Postgres:
                     provider = new PostgresProvider(connectionString);
+                    break;
+                case DbConnectionTypes.Oracle:
+                    provider = new OracleProvider(connectionString);
                     break;
                 default:
                     return null;
