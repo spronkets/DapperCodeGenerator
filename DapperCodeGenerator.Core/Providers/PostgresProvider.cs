@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
@@ -12,7 +13,7 @@ namespace DapperCodeGenerator.Core.Providers
     public class PostgresProvider : Provider
     {
         private readonly string[] systemDatabases = { "system", "postgres", "template0", "template1" };
-        private readonly string[] systemTables = { "pg_", "sql_" };
+        private readonly string[] systemTables = { "VersionInfo", "pg_", "sql_" };
 
         private readonly NpgsqlConnectionStringBuilder connectionStringBuilder;
 
@@ -31,7 +32,7 @@ namespace DapperCodeGenerator.Core.Providers
                 using (var db = new NpgsqlConnection(connectionStringBuilder.ToString()))
                 {
                     db.Open();
-                    databases = db.GetSchema("Databases");
+                    databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
                     db.Close();
                 }
             }
@@ -45,7 +46,7 @@ namespace DapperCodeGenerator.Core.Providers
                 foreach (DataRow databaseRow in databases.Rows)
                 {
                     var databaseName = databaseRow.ItemArray[0].ToString();
-                    if (!systemDatabases.Contains(databaseName))
+                    if (!systemDatabases.Any(d => d.Equals(databaseName, StringComparison.InvariantCultureIgnoreCase)))
                     {
                         var database = new Database
                         {
@@ -66,7 +67,7 @@ namespace DapperCodeGenerator.Core.Providers
                 using (var db = new NpgsqlConnection($"{connectionStringBuilder};Database={databaseName};"))
                 {
                     db.Open();
-                    selectedDatabaseTables = db.GetSchema("Tables");
+                    selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
                     db.Close();
                 }
             }
@@ -108,9 +109,9 @@ namespace DapperCodeGenerator.Core.Providers
                     columnRestrictions[0] = databaseName;
                     columnRestrictions[2] = tableName;
 
-                    selectedDatabaseTableColumns = db.GetSchema("Columns", columnRestrictions);
+                    selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
 
-                    selectedDatabaseTablePrimaryColumns = db.GetSchema("IndexColumns", columnRestrictions);
+                    selectedDatabaseTablePrimaryColumns = db.GetSchema(SqlClientMetaDataCollectionNames.IndexColumns, columnRestrictions);
                     db.Close();
                 }
             }
@@ -151,7 +152,9 @@ namespace DapperCodeGenerator.Core.Providers
 
                             if (indexColumnName == columnName)
                             {
-                                if (indexId.IndexOf("_pk") != -1)
+                                if (indexId.StartsWith("pk_", StringComparison.InvariantCultureIgnoreCase) ||
+                                    indexId.EndsWith("_pk", StringComparison.InvariantCultureIgnoreCase) ||
+                                    indexId.EndsWith("_pkey", StringComparison.InvariantCultureIgnoreCase))
                                 {
                                     column.PrimaryKeys.Add(indexId);
                                 }
@@ -162,7 +165,7 @@ namespace DapperCodeGenerator.Core.Providers
                             }
                         }
                     }
-                    
+
                     yield return column;
                 }
             }

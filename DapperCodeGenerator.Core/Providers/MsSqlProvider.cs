@@ -30,7 +30,7 @@ namespace DapperCodeGenerator.Core.Providers
                 using (var db = new SqlConnection(connectionStringBuilder.ToString()))
                 {
                     db.Open();
-                    databases = db.GetSchema("Databases");
+                    databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
                     db.Close();
                 }
             }
@@ -44,7 +44,7 @@ namespace DapperCodeGenerator.Core.Providers
                 foreach (DataRow databaseRow in databases.Rows)
                 {
                     var databaseName = databaseRow.ItemArray[0].ToString();
-                    if (!systemDatabases.Contains(databaseName))
+                    if (!systemDatabases.Any(d => d.Equals(databaseName, StringComparison.InvariantCultureIgnoreCase)))
                     {
                         var database = new Database
                         {
@@ -65,7 +65,7 @@ namespace DapperCodeGenerator.Core.Providers
                 using (var db = new SqlConnection($"{connectionStringBuilder};Initial Catalog={databaseName};"))
                 {
                     db.Open();
-                    selectedDatabaseTables = db.GetSchema("Tables");
+                    selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
                     db.Close();
                 }
             }
@@ -79,7 +79,7 @@ namespace DapperCodeGenerator.Core.Providers
                 foreach (DataRow tableRow in selectedDatabaseTables.Rows)
                 {
                     var tableName = tableRow.ItemArray[2].ToString();
-                    if (!systemTables.Contains(tableName))
+                    if (!systemTables.Any(t => t.Equals(tableName, StringComparison.InvariantCultureIgnoreCase)))
                     {
                         var table = new DatabaseTable
                         {
@@ -98,6 +98,7 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTableColumns = null;
 
             DataTable selectedDatabaseTablePrimaryColumns = null;
+            DataTable selectedDatabaseTableForeignKeyColumns = null;
             try
             {
                 using (var db = new SqlConnection($"{connectionStringBuilder};Initial Catalog={databaseName};"))
@@ -107,9 +108,10 @@ namespace DapperCodeGenerator.Core.Providers
                     columnRestrictions[0] = databaseName;
                     columnRestrictions[2] = tableName;
 
-                    selectedDatabaseTableColumns = db.GetSchema("Columns", columnRestrictions);
+                    selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
 
-                    selectedDatabaseTablePrimaryColumns = db.GetSchema("IndexColumns", columnRestrictions);
+                    selectedDatabaseTablePrimaryColumns = db.GetSchema(SqlClientMetaDataCollectionNames.IndexColumns, columnRestrictions);
+                    selectedDatabaseTableForeignKeyColumns = db.GetSchema(SqlClientMetaDataCollectionNames.ForeignKeys, columnRestrictions);
                     db.Close();
                 }
             }
@@ -161,6 +163,20 @@ namespace DapperCodeGenerator.Core.Providers
                             }
                         }
                     }
+
+                    //if (selectedDatabaseTableForeignKeyColumns != null)
+                    //{
+                    //    foreach (DataRow foreignKeyRow in selectedDatabaseTableForeignKeyColumns.Rows)
+                    //    {
+                    //        var foreignKeyId = foreignKeyRow[2].ToString();
+                    //        var foreignKeyColumnName = foreignKeyRow[6].ToString();
+
+                    //        if (foreignKeyColumnName == columnName)
+                    //        {
+                    //            column.ForeignKeys.Add(foreignKeyId);
+                    //        }
+                    //    }
+                    //}
 
                     yield return column;
                 }

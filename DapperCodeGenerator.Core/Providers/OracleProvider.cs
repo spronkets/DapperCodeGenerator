@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.OracleClient;
+using System.Data.SqlClient;
 using System.Linq;
 using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
@@ -29,7 +30,7 @@ namespace DapperCodeGenerator.Core.Providers
                 using (var db = new OracleConnection($"{connectionStringBuilder};Password={connectionStringBuilder.Password};"))
                 {
                     db.Open();
-                    databases = db.GetSchema("Databases");
+                    databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
                     db.Close();
                 }
             }
@@ -43,7 +44,7 @@ namespace DapperCodeGenerator.Core.Providers
                 foreach (DataRow databaseRow in databases.Rows)
                 {
                     var databaseName = databaseRow.ItemArray[0].ToString();
-                    if (!systemDatabases.Contains(databaseName))
+                    if (!systemDatabases.Any(d => d.Equals(databaseName, StringComparison.InvariantCultureIgnoreCase)))
                     {
                         var database = new Database
                         {
@@ -64,7 +65,7 @@ namespace DapperCodeGenerator.Core.Providers
                 using (var db = new OracleConnection($"{connectionStringBuilder};Password={connectionStringBuilder.Password};Initial Catalog={databaseName};"))
                 {
                     db.Open();
-                    selectedDatabaseTables = db.GetSchema("Tables");
+                    selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
                     db.Close();
                 }
             }
@@ -106,9 +107,9 @@ namespace DapperCodeGenerator.Core.Providers
                     columnRestrictions[0] = databaseName;
                     columnRestrictions[2] = tableName;
 
-                    selectedDatabaseTableColumns = db.GetSchema("Columns", columnRestrictions);
+                    selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
 
-                    selectedDatabaseTablePrimaryColumns = db.GetSchema("IndexColumns", columnRestrictions);
+                    selectedDatabaseTablePrimaryColumns = db.GetSchema(SqlClientMetaDataCollectionNames.IndexColumns, columnRestrictions);
                     db.Close();
                 }
             }
@@ -149,7 +150,7 @@ namespace DapperCodeGenerator.Core.Providers
 
                             if (indexColumnName == columnName)
                             {
-                                if (indexId.IndexOf("PK_") != -1)
+                                if (indexId.StartsWith("pk_", StringComparison.InvariantCultureIgnoreCase))
                                 {
                                     column.PrimaryKeys.Add(indexId);
                                 }
@@ -170,62 +171,47 @@ namespace DapperCodeGenerator.Core.Providers
         {
             switch (dbTypeName)
             {
-                case "bigint":
+                // TODO: Oracle Types to CLR Types
+                case "INTERVAL YEAR TO MONTH":
                     return isNullable ? typeof(long?) : typeof(long);
 
-                case "binary":
-                case "image":
-                case "timestamp":
-                case "varbinary":
+                case "BFILE":
+                case "BLOB":
+                case "LONG RAW":
+                case "RAW":
                     return typeof(byte[]);
 
                 case "bit":
                     return isNullable ? typeof(bool?) : typeof(bool);
 
-                case "char":
-                case "nchar":
-                case "ntext":
-                case "nvarchar":
-                case "text":
-                case "varchar":
-                case "xml":
+                case "CHAR":
+                case "CLOB":
+                case "LONG":
+                case "NCHAR":
+                case "NCLOB":
+                case "REF":
+                case "ROWID":
+                case "UROWID":
+                case "VARCHAR2":
+                case "XMLType":
                     return typeof(string);
 
-                case "datetime":
-                case "smalldatetime":
-                case "date":
-                case "time":
-                case "datetime2":
+                case "DATE":
+                case "TIMESTAMP":
+                case "TIMESTAMP WITH LOCAL TIME ZONE":
+                case "TIMESTAMP WITH TIME ZONE":
                     return isNullable ? typeof(DateTime?) : typeof(DateTime);
 
-                case "decimal":
-                case "money":
-                case "smallmoney":
+                case "INTERVAL DAY TO SECOND":
+                    return isNullable ? typeof(TimeSpan?) : typeof(TimeSpan);
+
+                case "BINARY_DOUBLE":
+                case "BINARY_FLOAT":
+                case "BINARY_INTEGER":
+                case "NUMBER":
+                case "NVARCHAR2":
+                case "PLS_INTEGER":
                     return isNullable ? typeof(decimal?) : typeof(decimal);
-
-                case "float":
-                    return isNullable ? typeof(double?) : typeof(double);
-
-                case "int":
-                    return isNullable ? typeof(int?) : typeof(int);
-
-                case "real":
-                    return isNullable ? typeof(float?) : typeof(float);
-
-                case "uniqueidentifier":
-                    return isNullable ? typeof(Guid?) : typeof(Guid);
-
-                case "smallint":
-                    return isNullable ? typeof(short?) : typeof(short);
-
-                case "tinyint":
-                    return isNullable ? typeof(byte?) : typeof(byte);
-
-                case "structured":
-                    return typeof(DataTable);
-
-                case "datetimeoffset":
-                    return isNullable ? typeof(DateTimeOffset?) : typeof(DateTimeOffset);
 
                 default:
                     return typeof(object);
