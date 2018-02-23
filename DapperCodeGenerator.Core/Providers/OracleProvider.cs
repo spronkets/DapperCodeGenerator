@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.OracleClient;
 using System.Data.SqlClient;
 using System.Linq;
 using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
+using Oracle.ManagedDataAccess.Client;
 
 namespace DapperCodeGenerator.Core.Providers
 {

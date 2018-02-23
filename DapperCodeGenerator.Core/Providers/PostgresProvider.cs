@@ -16,14 +16,14 @@ namespace DapperCodeGenerator.Core.Providers
         private readonly string[] systemTables = { "VersionInfo", "pg_", "sql_" };
 
         private readonly NpgsqlConnectionStringBuilder connectionStringBuilder;
-
+        
         public PostgresProvider(string connectionString)
             : base(connectionString)
         {
             connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
             connectionStringBuilder.Database = "";
         }
-
+        
         protected override IEnumerable<Database> GetDatabases()
         {
             DataTable databases = null;
