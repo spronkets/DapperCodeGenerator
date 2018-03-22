@@ -32,45 +32,7 @@ namespace DapperCodeGenerator.Core.Providers
 
 		protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName)
 		{
-			DataTable selectedDatabaseTables = null;
-			try
-			{
-				using (var db = new OracleConnection($"{connectionStringBuilder}"))
-				{
-					db.Open();
-					selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
-					db.Close();
-				}
-			}
-			catch (Exception exc)
-			{
-				Console.Error.WriteLine(exc.Message, exc);
-			}
-
-			if (selectedDatabaseTables != null)
-			{
-				foreach (DataRow tableRow in selectedDatabaseTables.Rows)
-				{
-					var ownerName = tableRow.ItemArray[0].ToString();
-					var tableName = tableRow.ItemArray[1].ToString();
-					var typeName = tableRow.ItemArray[2].ToString();
-					if (ownerName == databaseName && typeName == "User")
-					{
-						var table = new DatabaseTable
-						{
-							ConnectionType = DbConnectionTypes.Oracle,
-							DatabaseName = databaseName,
-							TableName = tableName
-						};
-						yield return table;
-					}
-				}
-			}
-		}
-
-		protected override IEnumerable<DatabaseTableColumn> GetDatabaseTableColumns(string databaseName, string tableName)
-		{
-			var columns = new List<DatabaseTableColumn>();
+			var tables = new List<DatabaseTable>();
 
 			try
 			{
@@ -81,8 +43,49 @@ namespace DapperCodeGenerator.Core.Providers
 						db.Open();
 						cmd.BindByName = true;
 
-						cmd.CommandText = "select * from user_tab_columns";
+						cmd.CommandText = "SELECT * FROM USER_TABLES";
+						OracleDataReader reader = cmd.ExecuteReader();
+						while (reader.Read())
+						{
+							var tableName = reader["TABLE_NAME"].ToString();
 
+							var table = new DatabaseTable
+							{
+								ConnectionType = DbConnectionTypes.Oracle,
+								DatabaseName = databaseName,
+								TableName = tableName
+							};
+							tables.Add(table);
+						}
+
+						reader.Dispose();
+					}
+					db.Close();
+				}
+			}
+			catch (Exception exc)
+			{
+				Console.Error.WriteLine(exc.Message, exc);
+			}
+
+			return tables;
+		}
+
+		protected override IEnumerable<DatabaseTableColumn> GetDatabaseTableColumns(string databaseName, string tableName)
+		{
+			var columns = new List<DatabaseTableColumn>();
+
+			try
+			{
+				using (var db = new OracleConnection($"{connectionStringBuilder}"))
+				{
+					db.Open();
+
+					using (var cmd = db.CreateCommand())
+					{
+						cmd.BindByName = true;
+
+						cmd.CommandText = $"SELECT * FROM USER_TAB_COLUMNS WHERE TABLE_NAME = '{tableName}'";
 						OracleDataReader reader = cmd.ExecuteReader();
 						while (reader.Read())
 						{
@@ -92,7 +95,7 @@ namespace DapperCodeGenerator.Core.Providers
 							int.TryParse(maxLengthStr, out var maxLength);
 							var isNullable = reader["NULLABLE"].ToString() == "Y";
 							var type = GetClrType(dataType, isNullable);
-							
+
 							var column = new DatabaseTableColumn
 							{
 								ConnectionType = DbConnectionTypes.Oracle,
@@ -106,6 +109,39 @@ namespace DapperCodeGenerator.Core.Providers
 							};
 							columns.Add(column);
 						}
+						
+						cmd.CommandText = $"SELECT COLUMN_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE FROM USER_CONSTRAINTS NATURAL JOIN USER_CONS_COLUMNS WHERE TABLE_NAME = '{tableName}'";
+						reader = cmd.ExecuteReader();
+						while (reader.Read())
+						{
+							var columnName = reader["COLUMN_NAME"].ToString();
+
+							var column = columns.SingleOrDefault(c => c.TableName == tableName && c.ColumnName == columnName);
+							if (column != null)
+							{
+								var constraintName = reader["CONSTRAINT_NAME"].ToString();
+								var constraintType = reader["CONSTRAINT_TYPE"].ToString();
+
+								switch (constraintType)
+								{
+									case "P": // Primary Key
+										column.PrimaryKeys.Add(constraintName);
+										break;
+									case "R": // Foreign Key
+										column.ForeignKeys.Add(constraintName);
+										break;
+									case "U": // Unique Key
+										column.UniqueKeys.Add(constraintName);
+										break;
+									case "C": // Check on a Table
+									case "O": // Read Only on a View
+									case "V": // Check Option on a View
+									default:
+										// Do nothing
+										break;
+								}
+							}
+						}
 
 						reader.Dispose();
 					}
@@ -116,8 +152,6 @@ namespace DapperCodeGenerator.Core.Providers
 			{
 				Console.Error.WriteLine(exc.Message, exc);
 			}
-
-			// TODO: Primary Index, Identity, Foreign Key, etc
 
 			return columns;
 		}
