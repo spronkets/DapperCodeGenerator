@@ -167,8 +167,10 @@ namespace DapperCodeGenerator.Core.Providers
 				case "BFILE":
 				case "BLOB":
 				case "LONG RAW":
-				case "RAW":
 					return typeof(byte[]);
+
+				case "RAW":
+					return typeof(Guid);
 
 				case "bit":
 					return isNullable ? typeof(bool?) : typeof(bool);
@@ -182,23 +184,19 @@ namespace DapperCodeGenerator.Core.Providers
 				case "ROWID":
 				case "UROWID":
 				case "VARCHAR2":
+				case "NVARCHAR2":
 				case "XMLType":
 					return typeof(string);
 
 				case "DATE":
 				case "TIMESTAMP":
-				case "TIMESTAMP WITH LOCAL TIME ZONE":
-				case "TIMESTAMP WITH TIME ZONE":
+				case "TIMESTAMP(4)":
 					return isNullable ? typeof(DateTime?) : typeof(DateTime);
-
-				case "INTERVAL DAY TO SECOND":
-					return isNullable ? typeof(TimeSpan?) : typeof(TimeSpan);
-
+					
 				case "BINARY_DOUBLE":
 				case "BINARY_FLOAT":
 				case "BINARY_INTEGER":
 				case "NUMBER":
-				case "NVARCHAR2":
 				case "PLS_INTEGER":
 					return isNullable ? typeof(decimal?) : typeof(decimal);
 
