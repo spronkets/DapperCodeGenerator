@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DapperCodeGenerator.Web", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DapperCodeGenerator.Core", "DapperCodeGenerator.Core\DapperCodeGenerator.Core.csproj", "{914719B8-7633-40C5-B156-2A5BE90D1F74}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FBE92A97-8C77-4B4E-808D-6DBB89983A27}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DDB902A1-6F85-4BDB-BA65-4D02021A2D19}"
 	ProjectSection(SolutionItems) = preProject
 		global.json = global.json
 	EndProjectSection
