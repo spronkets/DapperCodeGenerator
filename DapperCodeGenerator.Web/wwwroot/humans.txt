@@ -1,0 +1,11 @@
+/* TEAM */
+Name: Kody Crossman
+GitHub: https://github.com/kcrossman
+LinkedIn: https://www.linkedin.com/in/kodyc/
+
+/* ATTRIBUTE */
+Contributors: https://github.com/kcrossman/DapperCodeGenerator/graphs/contributors
+
+/* PROJECT */
+Project Name: Dapper Code Generator
+Project Location: https://github.com/kcrossman/DapperCodeGenerator

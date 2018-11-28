@@ -49,8 +49,8 @@
 {
     <div class="mt-5">
         <span class="btn-group btn-group-sm float-right">
-            @Html.Partial("Partials/_GeneratedTablesDataModelsModal", Model.SelectedDatabase)
-            @Html.Partial("Partials/_GeneratedTablesDapperModal", Model.SelectedDatabase)
+            @Html.Partial("Partials/DataModels/_GeneratedTablesDataModelsModal", Model.SelectedDatabase)
+            @Html.Partial("Partials/Dapper/_GeneratedTablesDapperModal", Model.SelectedDatabase)
         </span>
         <h4><strong>@Model.SelectedDatabase.DatabaseName</strong> Database</h4>
     </div>
@@ -72,8 +72,8 @@
                     <td>
                         <span class="align-middle">@table.TableName</span>
                         <span class="btn-group btn-group-sm float-right">
-                            @Html.Partial("Partials/_GeneratedTableDataModelModal", table)
-                            @Html.Partial("Partials/_GeneratedTableDapperModal", table)
+                            @Html.Partial("Partials/DataModels/_GeneratedTableDataModelModal", table)
+                            @Html.Partial("Partials/Dapper/_GeneratedTableDapperModal", table)
                         </span>
                     </td>
                 </tr>

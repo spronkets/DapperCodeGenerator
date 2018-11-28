@@ -1,12 +1,14 @@
 ﻿body {
+    font-size: 14px;
     padding-top: 4em;
+    padding-bottom: 3em;
 }
 
 .modal {
     padding: 1em;
 }
 
-.modal-dialog {
+body.modal-open .modal-dialog {
     min-width: 100%;
     min-height: 100%;
     width: 100%;
@@ -15,12 +17,23 @@
     padding: 0;
 }
 
-.modal-content {
-    min-width: 100%;
-    min-height: 100%;
-    width: 100%;
+body.modal-open .modal-content {
     height: 100%;
+    width: 100%;
     overflow: auto;
+}
+
+body.modal-open .modal-header {
+    height: 4.5em;
+    line-height: unset;
+}
+
+body.modal-open .modal-body {
+    overflow-y: auto;
+}
+
+body.modal-open .modal-footer {
+    line-height: unset;
 }
 
 .material-icons.md-18 {
@@ -51,4 +64,11 @@ pre code {
     padding: 1em;
     background-color: #e9ecef;
     overflow: auto;
+}
+
+#footprint {
+    position: fixed;
+    right: 1em;
+    bottom: 1em;
+    z-index: 100;
 }

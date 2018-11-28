@@ -8,6 +8,8 @@ namespace DapperCodeGenerator.Core.Models
 	    public DbConnectionTypes ConnectionType { get; set; }
         public string DatabaseName { get; set; }
         public string TableName { get; set; }
+
+        public string DataModelName => $"{TableName}DataModel";
         
         public List<DatabaseTableColumn> Columns { get; set; } = new List<DatabaseTableColumn>();
     }

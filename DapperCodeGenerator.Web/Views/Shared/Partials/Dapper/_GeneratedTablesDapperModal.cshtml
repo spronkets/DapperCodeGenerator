@@ -17,7 +17,17 @@
                 </button>
             </div>
             <div class="modal-body">
+                <div class="alert alert-info" role="alert">
+                    <label for="alt-generators">Alternatives:</label>
+                    <ul id="alt-generators">
+                        <li><a href="https://github.com/MoonStorm/Dapper.FastCRUD">FastCRUD</a></li>
+                        <li><a href="https://github.com/ericdc1/Dapper.SimpleCRUD">SimpleCRUD</a></li>
+                    </ul>
+                </div>
                 <h5><code id="@modalId-data-model-name">@{@Model.DatabaseName}Repository.cs</code></h5>
+                <div class="alert alert-warning" role="alert">
+                    This Dapper code is written using T-SQL syntax and might not be compatible with Postgres/Orale
+                </div>
                 <pre><code id="@modalId-data-model-code">@DapperGenerator.GenerateDapperFromDatabase(Model)</code></pre>
             </div>
             <div class="modal-footer">

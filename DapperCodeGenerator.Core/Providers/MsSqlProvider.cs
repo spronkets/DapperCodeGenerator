@@ -163,21 +163,7 @@ namespace DapperCodeGenerator.Core.Providers
                             }
                         }
                     }
-
-                    //if (selectedDatabaseTableForeignKeyColumns != null)
-                    //{
-                    //    foreach (DataRow foreignKeyRow in selectedDatabaseTableForeignKeyColumns.Rows)
-                    //    {
-                    //        var foreignKeyId = foreignKeyRow[2].ToString();
-                    //        var foreignKeyColumnName = foreignKeyRow[6].ToString();
-
-                    //        if (foreignKeyColumnName == columnName)
-                    //        {
-                    //            column.ForeignKeys.Add(foreignKeyId);
-                    //        }
-                    //    }
-                    //}
-
+                    
                     yield return column;
                 }
             }

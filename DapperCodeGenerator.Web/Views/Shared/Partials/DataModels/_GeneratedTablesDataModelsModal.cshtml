@@ -4,6 +4,7 @@
 
 @{
     var modalId = $"TablesDataModelsModal_{Guid.NewGuid()}";
+
 }
 
 <button type="button" class="btn btn-sm btn-info" title="All @Model.DatabaseName Database Data Models" data-toggle="modal" data-target="#@modalId">All Data Models</button>
@@ -83,7 +84,7 @@
                                         }
                                     </tbody>
                                 </table>
-                                <h5><code id="@modalId-data-model-name">@{@table.TableName}DataModel.cs</code></h5>
+                                <h5><code id="@modalId-data-model-name">@{@table.DataModelName}.cs</code></h5>
                                 <pre><code id="@modalId-data-model-code">@DataModelGenerator.GenerateDataModelFromTable(table)</code></pre>
                             </div>
                         }

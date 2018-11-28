@@ -4,10 +4,10 @@
         <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.5" />
+        <PackageReference Include="Microsoft.AspNetCore.App" Version="2.1.6" />
         <PackageReference Include="Microsoft.VisualStudio.Web.BrowserLink" Version="2.1.1" />
-        <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.1.3" PrivateAssets="All" />
-        <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+        <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.1.6" PrivateAssets="All" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
     </ItemGroup>
     <ItemGroup>
         <None Include="wwwroot\favicon.ico" />

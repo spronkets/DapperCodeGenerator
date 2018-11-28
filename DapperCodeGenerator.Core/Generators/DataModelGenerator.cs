@@ -31,7 +31,7 @@ namespace DapperCodeGenerator.Core.Generators
             stringBuilder.AppendLine($"namespace {dataModelNamespace}");
             stringBuilder.AppendLine("{");
 
-            stringBuilder.AppendLine($"\tpublic class {table.TableName}DataModel");
+            stringBuilder.AppendLine($"\tpublic class {table.DataModelName}");
             stringBuilder.AppendLine("\t{");
 
             foreach (var column in table.Columns)

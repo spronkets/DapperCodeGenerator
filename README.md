@@ -1,7 +1,7 @@
 # Dapper Code Generator
 Simple C# Code Generator to create Database Models and Dapper CRUD to reduce manual code entry and repetitive work.
 
-This is currently being worked on. Use with knowledge that it may be unstable and/or may change. The technologies and patterns used are mostly for my own education.
+This is currently being worked on. Use with knowledge that it may be unstable and/or may change. The technologies and patterns used are mostly for my own education and shouldn't necessarily be followed in enterprise software.
 
 ### Instructions
 1. Clone or download the repository
@@ -12,7 +12,7 @@ This is currently being worked on. Use with knowledge that it may be unstable an
 5. Navigate to the site
 6. Select the Connection Type
     * If you want further support for an existing or any other DB types feel free to make a PR and/or submit a ticket, just know I won't prioritize it
-7. Enter a valid Connection String
+7. Enter a valid Connection String for the selected Connection Type
 8. Press the "Connect" button
     * If you get messages about there not being any databases, confirm your Connection Type and Connection String
 9. Select any database you wish to generate code for
