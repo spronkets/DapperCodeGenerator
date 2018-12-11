@@ -31,3 +31,6 @@ This is to generate the Dapper CRUD methods for interacting with the Database us
 This isn't complete yet. Try the below alternatives for now or write your own...
 * https://github.com/MoonStorm/Dapper.FastCRUD
 * https://github.com/ericdc1/Dapper.SimpleCRUD
+
+#### Other Projects:
+Code Generator - https://github.com/kcrossman/CodeGenerator
