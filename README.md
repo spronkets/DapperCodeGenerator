@@ -33,4 +33,6 @@ This isn't complete yet. Try the below alternatives for now or write your own...
 * https://github.com/ericdc1/Dapper.SimpleCRUD
 
 #### Other Projects:
-Code Generator - https://github.com/kcrossman/CodeGenerator
+- Code Generator - https://github.com/kcrossman/CodeGenerator
+- Code Snippets (gists) - https://gist.github.com/kcrossman
+
