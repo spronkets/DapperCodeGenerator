@@ -10,9 +10,9 @@
     <div class="form-group">
         <label for="connectionType">Connection Type</label>
         <select class="form-control"
-                asp-for="DbConnectionType"
                 id="connectionType"
                 name="connectionType"
+                asp-for="DbConnectionType"
                 onchange="document.location.href = `/Databases/SelectConnectionType?connectionType=${this.options[this.selectedIndex].value}`;">
             <option>@DbConnectionTypes.MsSql</option>
             <option>@DbConnectionTypes.Postgres</option>
@@ -38,6 +38,8 @@
     <h3 class="mt-5">Database(s)</h3>
 
     <select class="form-control"
+            id="databaseSelect"
+            name="databaseSelect"
             asp-for="SelectedDatabase.DatabaseName"
             asp-items="@(new SelectList(Model.Databases, "DatabaseName", "DatabaseName"))"
             onchange="document.location.href = `/Databases/SelectDatabase?databaseName=${this.options[this.selectedIndex].value}`;">
@@ -49,8 +51,8 @@
 {
     <div class="mt-5">
         <span class="btn-group btn-group-sm float-right">
-            @Html.Partial("Partials/DataModels/_GeneratedTablesDataModelsModal", Model.SelectedDatabase)
-            @Html.Partial("Partials/Dapper/_GeneratedTablesDapperModal", Model.SelectedDatabase)
+            <partial name="Partials/DataModels/_GeneratedTablesDataModelsModal" model="Model.SelectedDatabase" />
+            <partial name="Partials/Dapper/_GeneratedTablesDapperModal" model="Model.SelectedDatabase" />
         </span>
         <h4><strong>@Model.SelectedDatabase.DatabaseName</strong> Database</h4>
     </div>
@@ -72,8 +74,8 @@
                     <td>
                         <span class="align-middle">@table.TableName</span>
                         <span class="btn-group btn-group-sm float-right">
-                            @Html.Partial("Partials/DataModels/_GeneratedTableDataModelModal", table)
-                            @Html.Partial("Partials/Dapper/_GeneratedTableDapperModal", table)
+                            <partial name="Partials/DataModels/_GeneratedTableDataModelModal" model="table" />
+                            <partial name="Partials/Dapper/_GeneratedTableDapperModal" model="table" />
                         </span>
                     </td>
                 </tr>
