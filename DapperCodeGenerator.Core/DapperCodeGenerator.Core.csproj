@@ -3,10 +3,21 @@
         <TargetFramework>netcoreapp2.2</TargetFramework>
     </PropertyGroup>
     <ItemGroup>
+        <PackageReference Include="Dapper" Version="1.60.6" />
         <PackageReference Include="Microsoft.AspNetCore.App" />
-        <PackageReference Include="Npgsql" Version="4.0.4" />
-        <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.18.3" />
+        <PackageReference Include="Npgsql" Version="4.0.7" />
+        <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.3" />
         <PackageReference Include="System.CodeDom" Version="4.5.0" />
-        <PackageReference Include="System.Data.SqlClient" Version="4.6.0" />
+        <PackageReference Include="System.Data.SqlClient" Version="4.6.1" />
+        <PackageReference Include="System.DirectoryServices" Version="4.5.0" />
+        <PackageReference Include="System.DirectoryServices.Protocols" Version="4.5.0" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Update="ldap.ora">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="sqlnet.ora">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 </Project>

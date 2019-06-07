@@ -1,206 +1,229 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Dapper;
 using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
+using DapperCodeGenerator.Core.Providers.Oracle;
 using Oracle.ManagedDataAccess.Client;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DapperCodeGenerator.Core.Providers
 {
     public class OracleProvider : Provider
-	{
-		private readonly OracleConnectionStringBuilder connectionStringBuilder;
+    {
+        private readonly OracleConnectionStringBuilder connectionStringBuilder;
 
-		public OracleProvider(string connectionString)
-			: base(connectionString)
-		{
-			connectionStringBuilder = new OracleConnectionStringBuilder(connectionString);
-		}
+        public OracleProvider(string connectionString)
+            : base(connectionString)
+        {
+            connectionStringBuilder = new OracleConnectionStringBuilder(connectionString);
 
-		protected override IEnumerable<Database> GetDatabases()
-		{
-			return new List<Database> {
-				new Database
-				{
-					ConnectionType = DbConnectionTypes.Oracle,
-					DatabaseName = connectionStringBuilder.UserID.ToUpper()
-				}
-			};
-		}
+            DefaultTypeMap.MatchNamesWithUnderscores = true;
+        }
 
-		protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName)
-		{
-			var tables = new List<DatabaseTable>();
+        protected override IEnumerable<Database> GetDatabases()
+        {
+            var databases = new List<Database>();
 
-			try
-			{
-				using (var db = new OracleConnection($"{connectionStringBuilder}"))
-				{
-					using (var cmd = db.CreateCommand())
-					{
-						db.Open();
-						cmd.BindByName = true;
+            try
+            {
+                using (var db = new OracleConnection($"{connectionStringBuilder}"))
+                {
+                    // NOTE: this will include all "Users" AND "Schemas"
+                    const string oracleSchemasQuery = @"
+                        SELECT
+                            USERNAME AS SCHEMA_NAME
+                        FROM ALL_USERS
+                        ORDER BY USERNAME";
+                    var oracleSchemas = db.Query<OracleSchema>(oracleSchemasQuery);
+                    foreach (var oracleSchema in oracleSchemas)
+                    {
+                        var database = new Database
+                        {
+                            ConnectionType = DbConnectionTypes.Oracle,
+                            DatabaseName = oracleSchema.SchemaName
+                        };
+                        databases.Add(database);
+                    }
+                }
+            }
+            catch (Exception exc)
+            {
+                Console.Error.WriteLine(exc.Message, exc);
+            }
 
-						cmd.CommandText = "SELECT * FROM USER_TABLES";
-						OracleDataReader reader = cmd.ExecuteReader();
-						while (reader.Read())
-						{
-							var tableName = reader["TABLE_NAME"].ToString();
+            return databases;
+        }
 
-							var table = new DatabaseTable
-							{
-								ConnectionType = DbConnectionTypes.Oracle,
-								DatabaseName = databaseName,
-								TableName = tableName
-							};
-							tables.Add(table);
-						}
+        protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName)
+        {
+            var tables = new List<DatabaseTable>();
 
-						reader.Dispose();
-					}
-					db.Close();
-				}
-			}
-			catch (Exception exc)
-			{
-				Console.Error.WriteLine(exc.Message, exc);
-			}
+            try
+            {
+                using (var db = new OracleConnection($"{connectionStringBuilder}"))
+                {
+                    const string oracleTablesQuery = @"
+                        SELECT DISTINCT
+                            OBJECT_NAME AS TABLE_NAME
+                        FROM ALL_OBJECTS
+                        WHERE
+                            OBJECT_TYPE = 'TABLE' AND
+                            OWNER = :schemaName";
+                    var oracleTables = db.Query<OracleTable>(oracleTablesQuery, new { schemaName = databaseName });
+                    foreach (var oracleTable in oracleTables)
+                    {
+                        var table = new DatabaseTable
+                        {
+                            ConnectionType = DbConnectionTypes.Oracle,
+                            DatabaseName = databaseName,
+                            TableName = oracleTable.TableName
+                        };
+                        tables.Add(table);
+                    }
+                }
+            }
+            catch (Exception exc)
+            {
+                Console.Error.WriteLine(exc.Message, exc);
+            }
 
-			return tables;
-		}
+            return tables;
+        }
 
-		protected override IEnumerable<DatabaseTableColumn> GetDatabaseTableColumns(string databaseName, string tableName)
-		{
-			var columns = new List<DatabaseTableColumn>();
+        protected override IEnumerable<DatabaseTableColumn> GetDatabaseTableColumns(string databaseName, string tableName)
+        {
+            var columns = new List<DatabaseTableColumn>();
 
-			try
-			{
-				using (var db = new OracleConnection($"{connectionStringBuilder}"))
-				{
-					db.Open();
+            try
+            {
+                using (var db = new OracleConnection($"{connectionStringBuilder}"))
+                {
+                    const string oracleColumnsQuery = @"
+                        SELECT
+                            COLUMN_NAME,
+                            DATA_TYPE,
+                            DATA_LENGTH,
+                            NULLABLE
+                        FROM USER_TAB_COLUMNS
+                        WHERE TABLE_NAME = :tableName";
+                    var oracleColumns = db.Query<OracleColumn>(oracleColumnsQuery, new { tableName });
+                    foreach (var oracleColumn in oracleColumns)
+                    {
+                        var nullable = oracleColumn.Nullable == "Y";
+                        var dataType = GetClrType(oracleColumn.DataType, nullable);
+                        int.TryParse(oracleColumn.DataLength, out var dataLength);
 
-					using (var cmd = db.CreateCommand())
-					{
-						cmd.BindByName = true;
+                        var column = new DatabaseTableColumn
+                        {
+                            ConnectionType = DbConnectionTypes.Oracle,
+                            DatabaseName = databaseName,
+                            TableName = tableName,
+                            ColumnName = oracleColumn.ColumnName,
+                            DataType = oracleColumn.DataType,
+                            Type = dataType,
+                            TypeNamespace = dataType.Namespace,
+                            MaxLength = dataLength
+                        };
+                        columns.Add(column);
+                    }
 
-						cmd.CommandText = $"SELECT * FROM USER_TAB_COLUMNS WHERE TABLE_NAME = '{tableName}'";
-						OracleDataReader reader = cmd.ExecuteReader();
-						while (reader.Read())
-						{
-							var columnName = reader["COLUMN_NAME"].ToString();
-							var dataType = reader["DATA_TYPE"].ToString();
-							var maxLengthStr = reader["DATA_LENGTH"].ToString();
-							int.TryParse(maxLengthStr, out var maxLength);
-							var isNullable = reader["NULLABLE"].ToString() == "Y";
-							var type = GetClrType(dataType, isNullable);
+                    const string columnConstraintsQuery = @"
+                        SELECT
+                            COLUMN_NAME,
+                            CONSTRAINT_NAME,
+                            CONSTRAINT_TYPE
+                        FROM USER_CONSTRAINTS
+                        NATURAL JOIN USER_CONS_COLUMNS
+                            WHERE TABLE_NAME = :tableName";
+                    var columnConstraints = db.Query<OracleConstraint>(columnConstraintsQuery, new { tableName });
+                    foreach (var columnConstraint in columnConstraints)
+                    {
+                        var columnName = columnConstraint.ColumnName;
 
-							var column = new DatabaseTableColumn
-							{
-								ConnectionType = DbConnectionTypes.Oracle,
-								DatabaseName = databaseName,
-								TableName = tableName,
-								ColumnName = columnName,
-								DataType = dataType,
-								Type = type,
-								TypeNamespace = type.Namespace,
-								MaxLength = maxLength
-							};
-							columns.Add(column);
-						}
-						
-						cmd.CommandText = $"SELECT COLUMN_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE FROM USER_CONSTRAINTS NATURAL JOIN USER_CONS_COLUMNS WHERE TABLE_NAME = '{tableName}'";
-						reader = cmd.ExecuteReader();
-						while (reader.Read())
-						{
-							var columnName = reader["COLUMN_NAME"].ToString();
+                        var column = columns.SingleOrDefault(c => c.TableName == tableName && c.ColumnName == columnName);
+                        if (column != null)
+                        {
+                            var constraintName = columnConstraint.ConstraintName;
+                            var constraintType = columnConstraint.ConstraintType;
 
-							var column = columns.SingleOrDefault(c => c.TableName == tableName && c.ColumnName == columnName);
-							if (column != null)
-							{
-								var constraintName = reader["CONSTRAINT_NAME"].ToString();
-								var constraintType = reader["CONSTRAINT_TYPE"].ToString();
+                            switch (constraintType)
+                            {
+                                case "P": // Primary Key
+                                    column.PrimaryKeys.Add(constraintName);
+                                    break;
+                                case "R": // Foreign Key
+                                    column.ForeignKeys.Add(constraintName);
+                                    break;
+                                case "U": // Unique Key
+                                    column.UniqueKeys.Add(constraintName);
+                                    break;
+                                case "C": // Check on a Table
+                                case "O": // Read Only on a View
+                                case "V": // Check Option on a View
+                                default:
+                                    // Do nothing
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception exc)
+            {
+                Console.Error.WriteLine(exc.Message, exc);
+            }
 
-								switch (constraintType)
-								{
-									case "P": // Primary Key
-										column.PrimaryKeys.Add(constraintName);
-										break;
-									case "R": // Foreign Key
-										column.ForeignKeys.Add(constraintName);
-										break;
-									case "U": // Unique Key
-										column.UniqueKeys.Add(constraintName);
-										break;
-									case "C": // Check on a Table
-									case "O": // Read Only on a View
-									case "V": // Check Option on a View
-									default:
-										// Do nothing
-										break;
-								}
-							}
-						}
+            return columns;
+        }
 
-						reader.Dispose();
-					}
-					db.Close();
-				}
-			}
-			catch (Exception exc)
-			{
-				Console.Error.WriteLine(exc.Message, exc);
-			}
+        protected override Type GetClrType(string dbTypeName, bool isNullable)
+        {
+            switch (dbTypeName)
+            {
+                // TODO: Oracle Types to CLR Types
+                case "INTERVAL YEAR TO MONTH":
+                    return isNullable ? typeof(long?) : typeof(long);
 
-			return columns;
-		}
+                case "BFILE":
+                case "BLOB":
+                case "LONG RAW":
+                    return typeof(byte[]);
 
-		protected override Type GetClrType(string dbTypeName, bool isNullable)
-		{
-			switch (dbTypeName)
-			{
-				// TODO: Oracle Types to CLR Types
-				case "INTERVAL YEAR TO MONTH":
-					return isNullable ? typeof(long?) : typeof(long);
+                case "RAW":
+                    return typeof(Guid);
 
-				case "BFILE":
-				case "BLOB":
-				case "LONG RAW":
-					return typeof(byte[]);
+                case "bit":
+                    return isNullable ? typeof(bool?) : typeof(bool);
 
-				case "RAW":
-					return typeof(Guid);
+                case "CHAR":
+                case "CLOB":
+                case "LONG":
+                case "NCHAR":
+                case "NCLOB":
+                case "REF":
+                case "ROWID":
+                case "UROWID":
+                case "VARCHAR2":
+                case "NVARCHAR2":
+                case "XMLType":
+                    return typeof(string);
 
-				case "bit":
-					return isNullable ? typeof(bool?) : typeof(bool);
+                case "DATE":
+                case "TIMESTAMP":
+                case "TIMESTAMP(4)":
+                    return isNullable ? typeof(DateTime?) : typeof(DateTime);
 
-				case "CHAR":
-				case "CLOB":
-				case "LONG":
-				case "NCHAR":
-				case "NCLOB":
-				case "REF":
-				case "ROWID":
-				case "UROWID":
-				case "VARCHAR2":
-				case "NVARCHAR2":
-				case "XMLType":
-					return typeof(string);
+                case "BINARY_DOUBLE":
+                case "BINARY_FLOAT":
+                case "BINARY_INTEGER":
+                case "NUMBER":
+                case "PLS_INTEGER":
+                    return isNullable ? typeof(decimal?) : typeof(decimal);
 
-				case "DATE":
-				case "TIMESTAMP":
-				case "TIMESTAMP(4)":
-					return isNullable ? typeof(DateTime?) : typeof(DateTime);
-					
-				case "BINARY_DOUBLE":
-				case "BINARY_FLOAT":
-				case "BINARY_INTEGER":
-				case "NUMBER":
-				case "PLS_INTEGER":
-					return isNullable ? typeof(decimal?) : typeof(decimal);
-
-				default:
-					return typeof(object);
-			}
-		}
-	}
+                default:
+                    return typeof(object);
+            }
+        }
+    }
 }
