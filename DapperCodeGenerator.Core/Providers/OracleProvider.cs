@@ -105,7 +105,7 @@ namespace DapperCodeGenerator.Core.Providers
                             DATA_TYPE,
                             DATA_LENGTH,
                             NULLABLE
-                        FROM USER_TAB_COLUMNS
+                        FROM ALL_TAB_COLUMNS
                         WHERE TABLE_NAME = :tableName";
                     var oracleColumns = db.Query<OracleColumn>(oracleColumnsQuery, new { tableName });
                     foreach (var oracleColumn in oracleColumns)
@@ -133,9 +133,9 @@ namespace DapperCodeGenerator.Core.Providers
                             COLUMN_NAME,
                             CONSTRAINT_NAME,
                             CONSTRAINT_TYPE
-                        FROM USER_CONSTRAINTS
-                        NATURAL JOIN USER_CONS_COLUMNS
-                            WHERE TABLE_NAME = :tableName";
+                        FROM ALL_CONSTRAINTS
+                        NATURAL JOIN ALL_CONS_COLUMNS
+                        WHERE TABLE_NAME = :tableName";
                     var columnConstraints = db.Query<OracleConstraint>(columnConstraintsQuery, new { tableName });
                     foreach (var columnConstraint in columnConstraints)
                     {
@@ -179,9 +179,13 @@ namespace DapperCodeGenerator.Core.Providers
 
         protected override Type GetClrType(string dbTypeName, bool isNullable)
         {
+            if (dbTypeName.StartsWith("TIMESTAMP"))
+            {
+                return isNullable ? typeof(DateTime?) : typeof(DateTime);
+            }
+
             switch (dbTypeName)
             {
-                // TODO: Oracle Types to CLR Types
                 case "INTERVAL YEAR TO MONTH":
                     return isNullable ? typeof(long?) : typeof(long);
 
@@ -193,7 +197,7 @@ namespace DapperCodeGenerator.Core.Providers
                 case "RAW":
                     return typeof(Guid);
 
-                case "bit":
+                case "BIT":
                     return isNullable ? typeof(bool?) : typeof(bool);
 
                 case "CHAR":
@@ -210,8 +214,6 @@ namespace DapperCodeGenerator.Core.Providers
                     return typeof(string);
 
                 case "DATE":
-                case "TIMESTAMP":
-                case "TIMESTAMP(4)":
                     return isNullable ? typeof(DateTime?) : typeof(DateTime);
 
                 case "BINARY_DOUBLE":
@@ -219,6 +221,7 @@ namespace DapperCodeGenerator.Core.Providers
                 case "BINARY_INTEGER":
                 case "NUMBER":
                 case "PLS_INTEGER":
+                case "FLOAT":
                     return isNullable ? typeof(decimal?) : typeof(decimal);
 
                 default:
