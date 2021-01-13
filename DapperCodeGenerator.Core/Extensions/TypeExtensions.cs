@@ -8,7 +8,7 @@ namespace DapperCodeGenerator.Core.Extensions
     {
         public static string GetNameForCoding(this Type type)
         {
-            if (!type.FullName.StartsWith("System"))
+            if (type.FullName != null && !type.FullName.StartsWith("System"))
             {
                 return type.Name;
             }

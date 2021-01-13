@@ -27,12 +27,10 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable databases = null;
             try
             {
-                using (var db = new SqlConnection(connectionStringBuilder.ToString()))
-                {
-                    db.Open();
-                    databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
-                    db.Close();
-                }
+                using var db = new SqlConnection(connectionStringBuilder.ToString());
+                db.Open();
+                databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
+                db.Close();
             }
             catch (Exception exc)
             {
@@ -62,12 +60,10 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTables = null;
             try
             {
-                using (var db = new SqlConnection($"{connectionStringBuilder};Initial Catalog={databaseName};"))
-                {
-                    db.Open();
-                    selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
-                    db.Close();
-                }
+                using var db = new SqlConnection($"{connectionStringBuilder};Initial Catalog={databaseName};");
+                db.Open();
+                selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
+                db.Close();
             }
             catch (Exception exc)
             {
@@ -101,19 +97,17 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTableForeignKeyColumns = null;
             try
             {
-                using (var db = new SqlConnection($"{connectionStringBuilder};Initial Catalog={databaseName};"))
-                {
-                    db.Open();
-                    var columnRestrictions = new string[3];
-                    columnRestrictions[0] = databaseName;
-                    columnRestrictions[2] = tableName;
+                using var db = new SqlConnection($"{connectionStringBuilder};Initial Catalog={databaseName};");
+                db.Open();
+                var columnRestrictions = new string[3];
+                columnRestrictions[0] = databaseName;
+                columnRestrictions[2] = tableName;
 
-                    selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
+                selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
 
-                    selectedDatabaseTablePrimaryColumns = db.GetSchema(SqlClientMetaDataCollectionNames.IndexColumns, columnRestrictions);
-                    selectedDatabaseTableForeignKeyColumns = db.GetSchema(SqlClientMetaDataCollectionNames.ForeignKeys, columnRestrictions);
-                    db.Close();
-                }
+                selectedDatabaseTablePrimaryColumns = db.GetSchema(SqlClientMetaDataCollectionNames.IndexColumns, columnRestrictions);
+                selectedDatabaseTableForeignKeyColumns = db.GetSchema(SqlClientMetaDataCollectionNames.ForeignKeys, columnRestrictions);
+                db.Close();
             }
             catch (Exception exc)
             {
@@ -163,7 +157,7 @@ namespace DapperCodeGenerator.Core.Providers
                             }
                         }
                     }
-                    
+
                     yield return column;
                 }
             }

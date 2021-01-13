@@ -27,24 +27,22 @@ namespace DapperCodeGenerator.Core.Providers
 
             try
             {
-                using (var db = new OracleConnection($"{connectionStringBuilder}"))
-                {
-                    // NOTE: this will include all "Users" AND "Schemas"
-                    const string oracleSchemasQuery = @"
+                using var db = new OracleConnection($"{connectionStringBuilder}");
+                // NOTE: this will include all "Users" AND "Schemas"
+                const string oracleSchemasQuery = @"
                         SELECT
                             USERNAME AS SCHEMA_NAME
                         FROM ALL_USERS
                         ORDER BY USERNAME";
-                    var oracleSchemas = db.Query<OracleSchema>(oracleSchemasQuery);
-                    foreach (var oracleSchema in oracleSchemas)
+                var oracleSchemas = db.Query<OracleSchema>(oracleSchemasQuery);
+                foreach (var oracleSchema in oracleSchemas)
+                {
+                    var database = new Database
                     {
-                        var database = new Database
-                        {
-                            ConnectionType = DbConnectionTypes.Oracle,
-                            DatabaseName = oracleSchema.SchemaName
-                        };
-                        databases.Add(database);
-                    }
+                        ConnectionType = DbConnectionTypes.Oracle,
+                        DatabaseName = oracleSchema.SchemaName
+                    };
+                    databases.Add(database);
                 }
             }
             catch (Exception exc)
@@ -61,26 +59,24 @@ namespace DapperCodeGenerator.Core.Providers
 
             try
             {
-                using (var db = new OracleConnection($"{connectionStringBuilder}"))
-                {
-                    const string oracleTablesQuery = @"
+                using var db = new OracleConnection($"{connectionStringBuilder}");
+                const string oracleTablesQuery = @"
                         SELECT DISTINCT
                             OBJECT_NAME AS TABLE_NAME
                         FROM ALL_OBJECTS
                         WHERE
                             OBJECT_TYPE = 'TABLE' AND
                             OWNER = :schemaName";
-                    var oracleTables = db.Query<OracleTable>(oracleTablesQuery, new { schemaName = databaseName });
-                    foreach (var oracleTable in oracleTables)
+                var oracleTables = db.Query<OracleTable>(oracleTablesQuery, new { schemaName = databaseName });
+                foreach (var oracleTable in oracleTables)
+                {
+                    var table = new DatabaseTable
                     {
-                        var table = new DatabaseTable
-                        {
-                            ConnectionType = DbConnectionTypes.Oracle,
-                            DatabaseName = databaseName,
-                            TableName = oracleTable.TableName
-                        };
-                        tables.Add(table);
-                    }
+                        ConnectionType = DbConnectionTypes.Oracle,
+                        DatabaseName = databaseName,
+                        TableName = oracleTable.TableName
+                    };
+                    tables.Add(table);
                 }
             }
             catch (Exception exc)
@@ -97,9 +93,8 @@ namespace DapperCodeGenerator.Core.Providers
 
             try
             {
-                using (var db = new OracleConnection($"{connectionStringBuilder}"))
-                {
-                    const string oracleColumnsQuery = @"
+                using var db = new OracleConnection($"{connectionStringBuilder}");
+                const string oracleColumnsQuery = @"
                         SELECT
                             COLUMN_NAME,
                             DATA_TYPE,
@@ -107,28 +102,28 @@ namespace DapperCodeGenerator.Core.Providers
                             NULLABLE
                         FROM ALL_TAB_COLUMNS
                         WHERE TABLE_NAME = :tableName";
-                    var oracleColumns = db.Query<OracleColumn>(oracleColumnsQuery, new { tableName });
-                    foreach (var oracleColumn in oracleColumns)
+                var oracleColumns = db.Query<OracleColumn>(oracleColumnsQuery, new { tableName });
+                foreach (var oracleColumn in oracleColumns)
+                {
+                    var nullable = oracleColumn.Nullable == "Y";
+                    var dataType = GetClrType(oracleColumn.DataType, nullable);
+                    int.TryParse(oracleColumn.DataLength, out var dataLength);
+
+                    var column = new DatabaseTableColumn
                     {
-                        var nullable = oracleColumn.Nullable == "Y";
-                        var dataType = GetClrType(oracleColumn.DataType, nullable);
-                        int.TryParse(oracleColumn.DataLength, out var dataLength);
+                        ConnectionType = DbConnectionTypes.Oracle,
+                        DatabaseName = databaseName,
+                        TableName = tableName,
+                        ColumnName = oracleColumn.ColumnName,
+                        DataType = oracleColumn.DataType,
+                        Type = dataType,
+                        TypeNamespace = dataType.Namespace,
+                        MaxLength = dataLength
+                    };
+                    columns.Add(column);
+                }
 
-                        var column = new DatabaseTableColumn
-                        {
-                            ConnectionType = DbConnectionTypes.Oracle,
-                            DatabaseName = databaseName,
-                            TableName = tableName,
-                            ColumnName = oracleColumn.ColumnName,
-                            DataType = oracleColumn.DataType,
-                            Type = dataType,
-                            TypeNamespace = dataType.Namespace,
-                            MaxLength = dataLength
-                        };
-                        columns.Add(column);
-                    }
-
-                    const string columnConstraintsQuery = @"
+                const string columnConstraintsQuery = @"
                         SELECT
                             COLUMN_NAME,
                             CONSTRAINT_NAME,
@@ -136,35 +131,34 @@ namespace DapperCodeGenerator.Core.Providers
                         FROM ALL_CONSTRAINTS
                         NATURAL JOIN ALL_CONS_COLUMNS
                         WHERE TABLE_NAME = :tableName";
-                    var columnConstraints = db.Query<OracleConstraint>(columnConstraintsQuery, new { tableName });
-                    foreach (var columnConstraint in columnConstraints)
+                var columnConstraints = db.Query<OracleConstraint>(columnConstraintsQuery, new { tableName });
+                foreach (var columnConstraint in columnConstraints)
+                {
+                    var columnName = columnConstraint.ColumnName;
+
+                    var column = columns.SingleOrDefault(c => c.TableName == tableName && c.ColumnName == columnName);
+                    if (column != null)
                     {
-                        var columnName = columnConstraint.ColumnName;
+                        var constraintName = columnConstraint.ConstraintName;
+                        var constraintType = columnConstraint.ConstraintType;
 
-                        var column = columns.SingleOrDefault(c => c.TableName == tableName && c.ColumnName == columnName);
-                        if (column != null)
+                        switch (constraintType)
                         {
-                            var constraintName = columnConstraint.ConstraintName;
-                            var constraintType = columnConstraint.ConstraintType;
-
-                            switch (constraintType)
-                            {
-                                case "P": // Primary Key
-                                    column.PrimaryKeys.Add(constraintName);
-                                    break;
-                                case "R": // Foreign Key
-                                    column.ForeignKeys.Add(constraintName);
-                                    break;
-                                case "U": // Unique Key
-                                    column.UniqueKeys.Add(constraintName);
-                                    break;
-                                case "C": // Check on a Table
-                                case "O": // Read Only on a View
-                                case "V": // Check Option on a View
-                                default:
-                                    // Do nothing
-                                    break;
-                            }
+                            case "P": // Primary Key
+                                column.PrimaryKeys.Add(constraintName);
+                                break;
+                            case "R": // Foreign Key
+                                column.ForeignKeys.Add(constraintName);
+                                break;
+                            case "U": // Unique Key
+                                column.UniqueKeys.Add(constraintName);
+                                break;
+                            case "C": // Check on a Table
+                            case "O": // Read Only on a View
+                            case "V": // Check Option on a View
+                            default:
+                                // Do nothing
+                                break;
                         }
                     }
                 }

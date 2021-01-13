@@ -16,25 +16,23 @@ namespace DapperCodeGenerator.Core.Providers
         private readonly string[] systemTables = { "VersionInfo", "pg_", "sql_" };
 
         private readonly NpgsqlConnectionStringBuilder connectionStringBuilder;
-        
+
         public PostgresProvider(string connectionString)
             : base(connectionString)
         {
             connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
             connectionStringBuilder.Database = "";
         }
-        
+
         protected override IEnumerable<Database> GetDatabases()
         {
             DataTable databases = null;
             try
             {
-                using (var db = new NpgsqlConnection(connectionStringBuilder.ToString()))
-                {
-                    db.Open();
-                    databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
-                    db.Close();
-                }
+                using var db = new NpgsqlConnection(connectionStringBuilder.ToString());
+                db.Open();
+                databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
+                db.Close();
             }
             catch (Exception exc)
             {
@@ -64,12 +62,10 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTables = null;
             try
             {
-                using (var db = new NpgsqlConnection($"{connectionStringBuilder};Database={databaseName};"))
-                {
-                    db.Open();
-                    selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
-                    db.Close();
-                }
+                using var db = new NpgsqlConnection($"{connectionStringBuilder};Database={databaseName};");
+                db.Open();
+                selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
+                db.Close();
             }
             catch (Exception exc)
             {
@@ -102,18 +98,16 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTablePrimaryColumns = null;
             try
             {
-                using (var db = new NpgsqlConnection($"{connectionStringBuilder};Database={databaseName};"))
-                {
-                    db.Open();
-                    var columnRestrictions = new string[3];
-                    columnRestrictions[0] = databaseName;
-                    columnRestrictions[2] = tableName;
+                using var db = new NpgsqlConnection($"{connectionStringBuilder};Database={databaseName};");
+                db.Open();
+                var columnRestrictions = new string[3];
+                columnRestrictions[0] = databaseName;
+                columnRestrictions[2] = tableName;
 
-                    selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
+                selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
 
-                    selectedDatabaseTablePrimaryColumns = db.GetSchema(SqlClientMetaDataCollectionNames.IndexColumns, columnRestrictions);
-                    db.Close();
-                }
+                selectedDatabaseTablePrimaryColumns = db.GetSchema(SqlClientMetaDataCollectionNames.IndexColumns, columnRestrictions);
+                db.Close();
             }
             catch (Exception exc)
             {

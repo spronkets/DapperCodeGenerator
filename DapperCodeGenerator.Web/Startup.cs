@@ -1,8 +1,8 @@
 using DapperCodeGenerator.Web.Models;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace DapperCodeGenerator.Web
 {
@@ -18,13 +18,13 @@ namespace DapperCodeGenerator.Web
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc();
+            services.AddMvc(option => option.EnableEndpointRouting = false);
 
             services.AddSingleton<ApplicationState>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -37,7 +37,7 @@ namespace DapperCodeGenerator.Web
             }
 
             app.UseStaticFiles();
-            
+
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
