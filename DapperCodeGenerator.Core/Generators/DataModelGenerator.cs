@@ -25,7 +25,7 @@ namespace DapperCodeGenerator.Core.Generators
 
             if (string.IsNullOrEmpty(dataModelNamespace))
             {
-                dataModelNamespace = $"DapperCodeGenerator.{table.DatabaseName}.Models";
+                dataModelNamespace = $"DapperCodeGenerator.{table.DatabaseName.CapitalizeFirstLetter()}.Models";
             }
 
             stringBuilder.AppendLine($"namespace {dataModelNamespace}");

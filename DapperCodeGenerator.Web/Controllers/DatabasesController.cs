@@ -7,11 +7,11 @@ namespace DapperCodeGenerator.Web.Controllers
 {
     public class DatabasesController : Controller
     {
-        private readonly ApplicationState state;
+        private readonly ApplicationState _state;
 
         public DatabasesController(ApplicationState state)
         {
-            this.state = state;
+            this._state = state;
         }
 
         [HttpGet]
@@ -19,7 +19,7 @@ namespace DapperCodeGenerator.Web.Controllers
         {
             UpdateState(DbConnectionTypes.MsSql);
 
-            return View(state);
+            return View(_state);
         }
 
         [HttpGet]
@@ -27,7 +27,7 @@ namespace DapperCodeGenerator.Web.Controllers
         {
             UpdateState(connectionType);
 
-            return View("Index", state);
+            return View("Index", _state);
         }
 
         [HttpGet]
@@ -35,17 +35,17 @@ namespace DapperCodeGenerator.Web.Controllers
         {
             UpdateState(connectionType, connectionString);
 
-            state.Databases = state.CurrentProvider?.RefreshDatabases();
+            _state.Databases = _state.CurrentProvider?.RefreshDatabases();
 
-            return View("Index", state);
+            return View("Index", _state);
         }
 
         [HttpGet]
         public ActionResult SelectDatabase(string databaseName)
         {
-            state.SelectedDatabase = state.CurrentProvider?.SelectDatabase(state.Databases, databaseName);
+            _state.SelectedDatabase = _state.CurrentProvider?.SelectDatabase(_state.Databases, databaseName);
 
-            return View("Index", state);
+            return View("Index", _state);
         }
 
         private void UpdateState(DbConnectionTypes connectionType, string connectionString = null)
@@ -55,11 +55,11 @@ namespace DapperCodeGenerator.Web.Controllers
                 connectionString = GetDefaultConnectionString(connectionType);
             }
 
-            state.DbConnectionType = connectionType;
-            state.ConnectionString = connectionString;
-            state.CurrentProvider = GetProvider(connectionType, connectionString);
-            state.Databases = null;
-            state.SelectedDatabase = null;
+            _state.DbConnectionType = connectionType;
+            _state.ConnectionString = connectionString;
+            _state.CurrentProvider = GetProvider(connectionType, connectionString);
+            _state.Databases = null;
+            _state.SelectedDatabase = null;
         }
 
         private string GetDefaultConnectionString(DbConnectionTypes connectionType)

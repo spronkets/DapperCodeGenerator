@@ -11,12 +11,12 @@ namespace DapperCodeGenerator.Core.Providers
 {
     public class OracleProvider : Provider
     {
-        private readonly OracleConnectionStringBuilder connectionStringBuilder;
+        private readonly OracleConnectionStringBuilder _connectionStringBuilder;
 
         public OracleProvider(string connectionString)
             : base(connectionString)
         {
-            connectionStringBuilder = new OracleConnectionStringBuilder(connectionString);
+            _connectionStringBuilder = new OracleConnectionStringBuilder(connectionString);
 
             DefaultTypeMap.MatchNamesWithUnderscores = true;
         }
@@ -27,7 +27,7 @@ namespace DapperCodeGenerator.Core.Providers
 
             try
             {
-                using var db = new OracleConnection($"{connectionStringBuilder}");
+                using var db = new OracleConnection($"{_connectionStringBuilder}");
                 // NOTE: this will include all "Users" AND "Schemas"
                 const string oracleSchemasQuery = @"
                         SELECT
@@ -59,7 +59,7 @@ namespace DapperCodeGenerator.Core.Providers
 
             try
             {
-                using var db = new OracleConnection($"{connectionStringBuilder}");
+                using var db = new OracleConnection($"{_connectionStringBuilder}");
                 const string oracleTablesQuery = @"
                         SELECT DISTINCT
                             OBJECT_NAME AS TABLE_NAME
@@ -93,7 +93,7 @@ namespace DapperCodeGenerator.Core.Providers
 
             try
             {
-                using var db = new OracleConnection($"{connectionStringBuilder}");
+                using var db = new OracleConnection($"{_connectionStringBuilder}");
                 const string oracleColumnsQuery = @"
                         SELECT
                             COLUMN_NAME,

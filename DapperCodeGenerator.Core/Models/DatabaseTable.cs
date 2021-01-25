@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using DapperCodeGenerator.Core.Enumerations;
+using DapperCodeGenerator.Core.Extensions;
 
 namespace DapperCodeGenerator.Core.Models
 {
@@ -9,7 +10,7 @@ namespace DapperCodeGenerator.Core.Models
         public string DatabaseName { get; set; }
         public string TableName { get; set; }
 
-        public string DataModelName => $"{TableName}DataModel";
+        public string DataModelName => $"{TableName.CapitalizeFirstLetter().RemovePluralization()}DataModel";
 
         public List<DatabaseTableColumn> Columns { get; set; } = new List<DatabaseTableColumn>();
     }

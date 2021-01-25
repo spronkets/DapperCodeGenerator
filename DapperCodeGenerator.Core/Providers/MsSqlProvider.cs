@@ -10,16 +10,15 @@ namespace DapperCodeGenerator.Core.Providers
 {
     public class MsSqlProvider : Provider
     {
-        private readonly string[] systemDatabases = { "master", "model", "msdb", "tempdb" };
-        private readonly string[] systemTables = { "VersionInfo" };
+        private readonly string[] _systemDatabases = { "master", "model", "msdb", "tempdb" };
+        private readonly string[] _systemTables = { "VersionInfo", "database_firewall_rules" };
 
-        private readonly SqlConnectionStringBuilder connectionStringBuilder;
+        private readonly SqlConnectionStringBuilder _connectionStringBuilder;
 
         public MsSqlProvider(string connectionString)
             : base(connectionString)
         {
-            connectionStringBuilder = new SqlConnectionStringBuilder(connectionString);
-            connectionStringBuilder.InitialCatalog = "";
+            _connectionStringBuilder = new SqlConnectionStringBuilder(connectionString) { InitialCatalog = "" };
         }
 
         protected override IEnumerable<Database> GetDatabases()
@@ -27,7 +26,7 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable databases = null;
             try
             {
-                using var db = new SqlConnection(connectionStringBuilder.ToString());
+                using var db = new SqlConnection(_connectionStringBuilder.ToString());
                 db.Open();
                 databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
                 db.Close();
@@ -37,21 +36,27 @@ namespace DapperCodeGenerator.Core.Providers
                 Console.Error.WriteLine(exc.Message, exc);
             }
 
-            if (databases != null)
+            if (databases == null)
             {
-                foreach (DataRow databaseRow in databases.Rows)
+                yield break;
+            }
+
+            foreach (DataRow databaseRow in databases.Rows)
+            {
+                var databaseName = databaseRow.ItemArray[0].ToString();
+
+                if (_systemDatabases.Any(d => d.Equals(databaseName, StringComparison.InvariantCultureIgnoreCase)))
                 {
-                    var databaseName = databaseRow.ItemArray[0].ToString();
-                    if (!systemDatabases.Any(d => d.Equals(databaseName, StringComparison.InvariantCultureIgnoreCase)))
-                    {
-                        var database = new Database
-                        {
-                            ConnectionType = DbConnectionTypes.MsSql,
-                            DatabaseName = databaseName
-                        };
-                        yield return database;
-                    }
+                    continue;
                 }
+
+                var database = new Database
+                {
+                    ConnectionType = DbConnectionTypes.MsSql,
+                    DatabaseName = databaseName
+                };
+
+                yield return database;
             }
         }
 
@@ -60,7 +65,7 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTables = null;
             try
             {
-                using var db = new SqlConnection($"{connectionStringBuilder};Initial Catalog={databaseName};");
+                using var db = new SqlConnection($"{_connectionStringBuilder};Initial Catalog={databaseName};");
                 db.Open();
                 selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
                 db.Close();
@@ -70,22 +75,28 @@ namespace DapperCodeGenerator.Core.Providers
                 Console.Error.WriteLine(exc.Message, exc);
             }
 
-            if (selectedDatabaseTables != null)
+            if (selectedDatabaseTables == null)
             {
-                foreach (DataRow tableRow in selectedDatabaseTables.Rows)
+                yield break;
+            }
+
+            foreach (DataRow tableRow in selectedDatabaseTables.Rows)
+            {
+                var tableName = tableRow.ItemArray[2].ToString();
+
+                if (_systemTables.Any(t => t.Equals(tableName, StringComparison.InvariantCultureIgnoreCase)))
                 {
-                    var tableName = tableRow.ItemArray[2].ToString();
-                    if (!systemTables.Any(t => t.Equals(tableName, StringComparison.InvariantCultureIgnoreCase)))
-                    {
-                        var table = new DatabaseTable
-                        {
-                            ConnectionType = DbConnectionTypes.MsSql,
-                            DatabaseName = databaseName,
-                            TableName = tableName
-                        };
-                        yield return table;
-                    }
+                    continue;
                 }
+
+                var table = new DatabaseTable
+                {
+                    ConnectionType = DbConnectionTypes.MsSql,
+                    DatabaseName = databaseName,
+                    TableName = tableName
+                };
+
+                yield return table;
             }
         }
 
@@ -97,7 +108,7 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTableForeignKeyColumns = null;
             try
             {
-                using var db = new SqlConnection($"{connectionStringBuilder};Initial Catalog={databaseName};");
+                using var db = new SqlConnection($"{_connectionStringBuilder};Initial Catalog={databaseName};");
                 db.Open();
                 var columnRestrictions = new string[3];
                 columnRestrictions[0] = databaseName;
@@ -114,52 +125,56 @@ namespace DapperCodeGenerator.Core.Providers
                 Console.Error.WriteLine(exc.Message, exc);
             }
 
-            if (selectedDatabaseTableColumns != null)
+            if (selectedDatabaseTableColumns == null)
             {
-                foreach (DataRow columnRow in selectedDatabaseTableColumns.Rows)
+                yield break;
+            }
+
+            foreach (DataRow columnRow in selectedDatabaseTableColumns.Rows)
+            {
+                var columnName = columnRow.ItemArray[3].ToString();
+                var isNullable = columnRow.ItemArray[6].ToString() == "YES";
+                var dataType = columnRow.ItemArray[7].ToString();
+                var type = GetClrType(dataType, isNullable);
+                var maxLengthStr = columnRow.ItemArray[8].ToString();
+                int.TryParse(maxLengthStr, out var maxLength);
+
+                var column = new DatabaseTableColumn
                 {
-                    var columnName = columnRow.ItemArray[3].ToString();
-                    var isNullable = columnRow.ItemArray[6].ToString() == "YES";
-                    var dataType = columnRow.ItemArray[7].ToString();
-                    var type = GetClrType(dataType, isNullable);
-                    var maxLengthStr = columnRow.ItemArray[8].ToString();
-                    int.TryParse(maxLengthStr, out var maxLength);
+                    ConnectionType = DbConnectionTypes.MsSql,
+                    DatabaseName = databaseName,
+                    TableName = tableName,
+                    ColumnName = columnName,
+                    DataType = dataType,
+                    Type = type,
+                    TypeNamespace = type.Namespace,
+                    MaxLength = maxLength
+                };
 
-                    var column = new DatabaseTableColumn
+                if (selectedDatabaseTablePrimaryColumns != null)
+                {
+                    foreach (DataRow indexColumnRow in selectedDatabaseTablePrimaryColumns.Rows)
                     {
-                        ConnectionType = DbConnectionTypes.MsSql,
-                        DatabaseName = databaseName,
-                        TableName = tableName,
-                        ColumnName = columnName,
-                        DataType = dataType,
-                        Type = type,
-                        TypeNamespace = type.Namespace,
-                        MaxLength = maxLength
-                    };
+                        var indexId = indexColumnRow[2].ToString();
+                        var indexColumnName = indexColumnRow[6].ToString();
 
-                    if (selectedDatabaseTablePrimaryColumns != null)
-                    {
-                        foreach (DataRow indexColumnRow in selectedDatabaseTablePrimaryColumns.Rows)
+                        if (indexColumnName != columnName)
                         {
-                            var indexId = indexColumnRow[2].ToString();
-                            var indexColumnName = indexColumnRow[6].ToString();
+                            continue;
+                        }
 
-                            if (indexColumnName == columnName)
-                            {
-                                if (indexId.IndexOf("PK_") != -1)
-                                {
-                                    column.PrimaryKeys.Add(indexId);
-                                }
-                                else
-                                {
-                                    column.UniqueKeys.Add(indexId);
-                                }
-                            }
+                        if (indexId.IndexOf("PK_", StringComparison.Ordinal) != -1)
+                        {
+                            column.PrimaryKeys.Add(indexId);
+                        }
+                        else
+                        {
+                            column.UniqueKeys.Add(indexId);
                         }
                     }
-
-                    yield return column;
                 }
+
+                yield return column;
             }
         }
 

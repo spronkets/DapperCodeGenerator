@@ -12,16 +12,16 @@ namespace DapperCodeGenerator.Core.Providers
 {
     public class PostgresProvider : Provider
     {
-        private readonly string[] systemDatabases = { "system", "postgres", "template0", "template1" };
-        private readonly string[] systemTables = { "VersionInfo", "pg_", "sql_" };
+        private readonly string[] _systemDatabases = { "system", "postgres", "template0", "template1" };
+        private readonly string[] _systemTables = { "VersionInfo", "pg_", "sql_" };
 
-        private readonly NpgsqlConnectionStringBuilder connectionStringBuilder;
+        private readonly NpgsqlConnectionStringBuilder _connectionStringBuilder;
 
         public PostgresProvider(string connectionString)
             : base(connectionString)
         {
-            connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
-            connectionStringBuilder.Database = "";
+            _connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
+            _connectionStringBuilder.Database = "";
         }
 
         protected override IEnumerable<Database> GetDatabases()
@@ -29,7 +29,7 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable databases = null;
             try
             {
-                using var db = new NpgsqlConnection(connectionStringBuilder.ToString());
+                using var db = new NpgsqlConnection(_connectionStringBuilder.ToString());
                 db.Open();
                 databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
                 db.Close();
@@ -44,7 +44,7 @@ namespace DapperCodeGenerator.Core.Providers
                 foreach (DataRow databaseRow in databases.Rows)
                 {
                     var databaseName = databaseRow.ItemArray[0].ToString();
-                    if (!systemDatabases.Any(d => d.Equals(databaseName, StringComparison.InvariantCultureIgnoreCase)))
+                    if (!_systemDatabases.Any(d => d.Equals(databaseName, StringComparison.InvariantCultureIgnoreCase)))
                     {
                         var database = new Database
                         {
@@ -62,7 +62,7 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTables = null;
             try
             {
-                using var db = new NpgsqlConnection($"{connectionStringBuilder};Database={databaseName};");
+                using var db = new NpgsqlConnection($"{_connectionStringBuilder};Database={databaseName};");
                 db.Open();
                 selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
                 db.Close();
@@ -77,7 +77,7 @@ namespace DapperCodeGenerator.Core.Providers
                 foreach (DataRow tableRow in selectedDatabaseTables.Rows)
                 {
                     var tableName = tableRow.ItemArray[2].ToString();
-                    if (!systemTables.Any(t => tableName.StartsWith(t)))
+                    if (!_systemTables.Any(t => tableName.StartsWith(t)))
                     {
                         var table = new DatabaseTable
                         {
@@ -98,7 +98,7 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTablePrimaryColumns = null;
             try
             {
-                using var db = new NpgsqlConnection($"{connectionStringBuilder};Database={databaseName};");
+                using var db = new NpgsqlConnection($"{_connectionStringBuilder};Database={databaseName};");
                 db.Open();
                 var columnRestrictions = new string[3];
                 columnRestrictions[0] = databaseName;
