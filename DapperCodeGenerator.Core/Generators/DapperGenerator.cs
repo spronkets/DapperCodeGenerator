@@ -55,10 +55,10 @@ namespace DapperCodeGenerator.Core.Generators
             GenerateDapperUpdateMethodsFromTable(stringBuilder, table);
 
             stringBuilder.AppendLine();
-            GenerateDapperMergeMethodsFromTable(stringBuilder, table);
+            GenerateDapperDeleteMethodsFromTable(stringBuilder, table);
 
             stringBuilder.AppendLine();
-            GenerateDapperDeleteMethodsFromTable(stringBuilder, table);
+            GenerateDapperMergeMethodsFromTable(stringBuilder, table);
 
             stringBuilder.AppendLine();
             stringBuilder.AppendLine($"{PadBy(2)}#endregion {table.TableName}");
@@ -178,16 +178,38 @@ namespace DapperCodeGenerator.Core.Generators
             }
         }
 
+        private static void GenerateDapperDeleteMethodsFromTable(StringBuilder stringBuilder, DatabaseTable table)
+        {
+            var primaryKeyColumns = table.Columns.Where(tc => tc.IsPrimaryKey).ToList();
+            if (primaryKeyColumns.Count > 0)
+            {
+                var methodParameters = table.Columns.GetMethodParameters();
+                var columnNames = table.Columns.GetColumnNames();
+                var sqlWhereClauses = table.Columns.GetSqlWhereClauses();
+
+                var sqlWhereClausesForPrimaryKeys = primaryKeyColumns.GetSqlWhereClauses();
+                var dapperParametersForPrimaryKeys = primaryKeyColumns.GetDapperProperties();
+
+                stringBuilder.AppendLine($"{PadBy(2)}public async Task<int> Delete{table.TableName.RemovePluralization()}({methodParameters})");
+                stringBuilder.AppendLine($"{PadBy(2)}{{");
+                stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
+                stringBuilder.AppendLine($"{PadBy(3)}{{");
+                stringBuilder.AppendLine($"{PadBy(4)}const string deleteQuery = \"DELETE {table.TableName} WHERE {sqlWhereClausesForPrimaryKeys}\";");
+                stringBuilder.AppendLine($"{PadBy(4)}var rowsAffected = await db.ExecuteScalarAsync<int>(deleteQuery, new {{ {dapperParametersForPrimaryKeys} }});");
+                stringBuilder.AppendLine($"{PadBy(4)}return rowsAffected;");
+                stringBuilder.AppendLine($"{PadBy(3)}}}");
+                stringBuilder.AppendLine($"{PadBy(2)}}}");
+            }
+            else
+            {
+                stringBuilder.AppendLine($"{PadBy(2)}// INFO: There are no primary keys for the Dapper code generation tool to generate delete method(s).");
+            }
+        }
+
         private static void GenerateDapperMergeMethodsFromTable(StringBuilder stringBuilder, DatabaseTable table)
         {
             // TODO: generate merge method(s)
             stringBuilder.AppendLine("\t\t// WARNING: The Dapper code generation tool doesn't currently generate merge method(s).");
-        }
-
-        private static void GenerateDapperDeleteMethodsFromTable(StringBuilder stringBuilder, DatabaseTable table)
-        {
-            // TODO: generate delete method(s)
-            stringBuilder.AppendLine("\t\t// WARNING: The Dapper code generation tool doesn't currently generate delete method(s).");
         }
 
         private static string PadBy(int quantity, bool useSpaces = false, int spacesMultiplier = 4)
