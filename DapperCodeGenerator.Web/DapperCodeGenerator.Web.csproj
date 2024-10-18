@@ -1,16 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
     </PropertyGroup>
     <ItemGroup>
         <None Include="wwwroot\favicon.ico" />
         <None Include="wwwroot\scripts\site.js" />
         <None Include="wwwroot\styles\site.css" />
-    </ItemGroup>
-    <ItemGroup>
-      <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.2.0" />
-      <PackageReference Include="Microsoft.VisualStudio.Web.BrowserLink" Version="2.2.0" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\DapperCodeGenerator.Core\DapperCodeGenerator.Core.csproj" />
