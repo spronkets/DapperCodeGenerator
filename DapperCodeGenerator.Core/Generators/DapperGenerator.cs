@@ -13,11 +13,10 @@ namespace DapperCodeGenerator.Core.Generators
         {
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.AppendLine($"namespace {defaultNamespace}");
-            stringBuilder.AppendLine("{");
+            stringBuilder.AppendLine($"namespace {defaultNamespace};\n");
 
-            stringBuilder.AppendLine($"{PadBy(1)}public class {database.DatabaseName.CapitalizeFirstLetter()}Repository");
-            stringBuilder.AppendLine($"{PadBy(1)}{{");
+            stringBuilder.AppendLine($"public class {database.DatabaseName.CapitalizeFirstLetter()}Repository");
+            stringBuilder.AppendLine("{");
 
             for (var i = 0; i < database.Tables.Count; i++)
             {
@@ -29,7 +28,6 @@ namespace DapperCodeGenerator.Core.Generators
                 }
             }
 
-            stringBuilder.AppendLine($"{PadBy(1)}}}");
             stringBuilder.AppendLine("}");
             stringBuilder.AppendLine();
 
@@ -40,7 +38,7 @@ namespace DapperCodeGenerator.Core.Generators
         {
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.AppendLine($"{PadBy(2)}#region {table.TableName}");
+            stringBuilder.AppendLine($"{PadBy(1)}#region {table.TableName}");
             stringBuilder.AppendLine();
 
             GenerateDapperGetMethodsFromTable(stringBuilder, table);
@@ -61,7 +59,7 @@ namespace DapperCodeGenerator.Core.Generators
             GenerateDapperMergeMethodsFromTable(stringBuilder, table);
 
             stringBuilder.AppendLine();
-            stringBuilder.AppendLine($"{PadBy(2)}#endregion {table.TableName}");
+            stringBuilder.AppendLine($"{PadBy(1)}#endregion {table.TableName}");
 
             return stringBuilder.ToString();
         }
@@ -75,32 +73,32 @@ namespace DapperCodeGenerator.Core.Generators
                 var sqlWhereClauses = primaryKeyColumns.GetSqlWhereClauses();
                 var dapperProperties = primaryKeyColumns.GetDapperProperties();
 
-                stringBuilder.AppendLine($"{PadBy(2)}public async Task<{table.DataModelName}> Get{table.TableName.RemovePluralization()}({methodParameters})");
+                stringBuilder.AppendLine($"{PadBy(1)}public async Task<{table.DataModelName}> Get{table.TableName.RemovePluralization()}({methodParameters})");
+                stringBuilder.AppendLine($"{PadBy(1)}{{");
+                stringBuilder.AppendLine($"{PadBy(2)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
                 stringBuilder.AppendLine($"{PadBy(2)}{{");
-                stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
-                stringBuilder.AppendLine($"{PadBy(3)}{{");
-                stringBuilder.AppendLine($"{PadBy(4)}const string getQuery = \"SELECT * FROM {table.TableName} WHERE {sqlWhereClauses}\";");
-                stringBuilder.AppendLine($"{PadBy(4)}return await db.QuerySingleAsync<{table.DataModelName}>(getQuery, new {{ {dapperProperties} }});");
-                stringBuilder.AppendLine($"{PadBy(3)}}}");
+                stringBuilder.AppendLine($"{PadBy(3)}const string getQuery = \"SELECT * FROM {table.TableName} WHERE {sqlWhereClauses}\";");
+                stringBuilder.AppendLine($"{PadBy(3)}return await db.QuerySingleAsync<{table.DataModelName}>(getQuery, new {{ {dapperProperties} }});");
                 stringBuilder.AppendLine($"{PadBy(2)}}}");
+                stringBuilder.AppendLine($"{PadBy(1)}}}");
             }
             else
             {
-                stringBuilder.AppendLine($"{PadBy(2)}// INFO: There are no primary keys for the Dapper code generation tool to generate get method(s).");
+                stringBuilder.AppendLine($"{PadBy(1)}// INFO: There are no primary keys for the Dapper code generation tool to generate get method(s).");
             }
         }
 
         private static void GenerateDapperFindMethodsFromTable(StringBuilder stringBuilder, DatabaseTable table)
         {
-            stringBuilder.AppendLine($"{PadBy(2)}public async Task<IEnumerable<{table.DataModelName}>> FindAll{table.TableName}()");
+            stringBuilder.AppendLine($"{PadBy(1)}public async Task<IEnumerable<{table.DataModelName}>> FindAll{table.TableName}()");
+            stringBuilder.AppendLine($"{PadBy(1)}{{");
+            stringBuilder.AppendLine($"{PadBy(2)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
             stringBuilder.AppendLine($"{PadBy(2)}{{");
-            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
-            stringBuilder.AppendLine($"{PadBy(3)}{{");
-            stringBuilder.AppendLine($"{PadBy(4)}const string findAllQuery = \"SELECT * FROM {table.TableName}\";");
-            stringBuilder.AppendLine($"{PadBy(4)}var results = await db.QueryAsync<{table.DataModelName}>(findAllQuery);");
-            stringBuilder.AppendLine($"{PadBy(4)}return results;");
-            stringBuilder.AppendLine($"{PadBy(3)}}}");
+            stringBuilder.AppendLine($"{PadBy(3)}const string findAllQuery = \"SELECT * FROM {table.TableName}\";");
+            stringBuilder.AppendLine($"{PadBy(3)}var results = await db.QueryAsync<{table.DataModelName}>(findAllQuery);");
+            stringBuilder.AppendLine($"{PadBy(3)}return results;");
             stringBuilder.AppendLine($"{PadBy(2)}}}");
+            stringBuilder.AppendLine($"{PadBy(1)}}}");
 
             stringBuilder.AppendLine();
 
@@ -108,28 +106,28 @@ namespace DapperCodeGenerator.Core.Generators
             var sqlWhereClauses = table.Columns.GetSqlWhereClauses(parametersAreOptional: true);
             var dapperProperties = table.Columns.GetDapperProperties();
 
-            stringBuilder.AppendLine($"{PadBy(2)}public async Task<IEnumerable<{table.DataModelName}>> Find{table.TableName}ByAll({methodParameters})");
+            stringBuilder.AppendLine($"{PadBy(1)}public async Task<IEnumerable<{table.DataModelName}>> Find{table.TableName}ByAll({methodParameters})");
+            stringBuilder.AppendLine($"{PadBy(1)}{{");
+            stringBuilder.AppendLine($"{PadBy(2)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
             stringBuilder.AppendLine($"{PadBy(2)}{{");
-            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
-            stringBuilder.AppendLine($"{PadBy(3)}{{");
-            stringBuilder.AppendLine($"{PadBy(4)}const string findByAllQuery = \"SELECT * FROM {table.TableName} WHERE {sqlWhereClauses}\";");
-            stringBuilder.AppendLine($"{PadBy(4)}var results = await db.QueryAsync<{table.DataModelName}>(findByAllQuery, new {{ {dapperProperties} }});");
-            stringBuilder.AppendLine($"{PadBy(4)}return results;");
-            stringBuilder.AppendLine($"{PadBy(3)}}}");
+            stringBuilder.AppendLine($"{PadBy(3)}const string findByAllQuery = \"SELECT * FROM {table.TableName} WHERE {sqlWhereClauses}\";");
+            stringBuilder.AppendLine($"{PadBy(3)}var results = await db.QueryAsync<{table.DataModelName}>(findByAllQuery, new {{ {dapperProperties} }});");
+            stringBuilder.AppendLine($"{PadBy(3)}return results;");
             stringBuilder.AppendLine($"{PadBy(2)}}}");
+            stringBuilder.AppendLine($"{PadBy(1)}}}");
 
             stringBuilder.AppendLine();
 
-            stringBuilder.AppendLine($"{PadBy(2)}public async Task<IEnumerable<{table.DataModelName}>> Find{table.TableName}ByAny({methodParameters})");
+            stringBuilder.AppendLine($"{PadBy(1)}public async Task<IEnumerable<{table.DataModelName}>> Find{table.TableName}ByAny({methodParameters})");
+            stringBuilder.AppendLine($"{PadBy(1)}{{");
+            stringBuilder.AppendLine($"{PadBy(2)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
             stringBuilder.AppendLine($"{PadBy(2)}{{");
-            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
-            stringBuilder.AppendLine($"{PadBy(3)}{{");
             // TODO: string replace is not ideal, should separate cases better
-            stringBuilder.AppendLine($"{PadBy(4)}const string findByAnyQuery = \"SELECT * FROM {table.TableName} WHERE {sqlWhereClauses.Replace(" AND ", " OR ").Replace("IS NULL OR", "IS NOT NULL AND")}\";");
-            stringBuilder.AppendLine($"{PadBy(4)}var results = await db.QueryAsync<{table.DataModelName}>(findByAnyQuery, new {{ {dapperProperties} }});");
-            stringBuilder.AppendLine($"{PadBy(4)}return results;");
-            stringBuilder.AppendLine($"{PadBy(3)}}}");
+            stringBuilder.AppendLine($"{PadBy(3)}const string findByAnyQuery = \"SELECT * FROM {table.TableName} WHERE {sqlWhereClauses.Replace(" AND ", " OR ").Replace("IS NULL OR", "IS NOT NULL AND")}\";");
+            stringBuilder.AppendLine($"{PadBy(3)}var results = await db.QueryAsync<{table.DataModelName}>(findByAnyQuery, new {{ {dapperProperties} }});");
+            stringBuilder.AppendLine($"{PadBy(3)}return results;");
             stringBuilder.AppendLine($"{PadBy(2)}}}");
+            stringBuilder.AppendLine($"{PadBy(1)}}}");
         }
 
         private static void GenerateDapperInsertMethodsFromTable(StringBuilder stringBuilder, DatabaseTable table)
@@ -139,15 +137,15 @@ namespace DapperCodeGenerator.Core.Generators
             var sqlInsertValues = table.Columns.GetSqlInsertValues();
             var dapperParameters = table.Columns.GetDapperProperties();
 
-            stringBuilder.AppendLine($"{PadBy(2)}public async Task<int> Create{table.TableName.RemovePluralization()}({methodParameters})");
+            stringBuilder.AppendLine($"{PadBy(1)}public async Task<int> Create{table.TableName.RemovePluralization()}({methodParameters})");
+            stringBuilder.AppendLine($"{PadBy(1)}{{");
+            stringBuilder.AppendLine($"{PadBy(2)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
             stringBuilder.AppendLine($"{PadBy(2)}{{");
-            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
-            stringBuilder.AppendLine($"{PadBy(3)}{{");
-            stringBuilder.AppendLine($"{PadBy(4)}const string insertQuery = \"INSERT INTO {table.TableName} ({columnNames}) VALUES ({sqlInsertValues})\";");
-            stringBuilder.AppendLine($"{PadBy(4)}var rowsAffected = await db.ExecuteScalarAsync<int>(insertQuery, new {{ {dapperParameters} }});");
-            stringBuilder.AppendLine($"{PadBy(4)}return rowsAffected;");
-            stringBuilder.AppendLine($"{PadBy(3)}}}");
+            stringBuilder.AppendLine($"{PadBy(3)}const string insertQuery = \"INSERT INTO {table.TableName} ({columnNames}) VALUES ({sqlInsertValues})\";");
+            stringBuilder.AppendLine($"{PadBy(3)}var rowsAffected = await db.ExecuteScalarAsync<int>(insertQuery, new {{ {dapperParameters} }});");
+            stringBuilder.AppendLine($"{PadBy(3)}return rowsAffected;");
             stringBuilder.AppendLine($"{PadBy(2)}}}");
+            stringBuilder.AppendLine($"{PadBy(1)}}}");
         }
 
         private static void GenerateDapperUpdateMethodsFromTable(StringBuilder stringBuilder, DatabaseTable table)
@@ -162,19 +160,19 @@ namespace DapperCodeGenerator.Core.Generators
                 var sqlWhereClausesForPrimaryKeys = primaryKeyColumns.GetSqlWhereClauses();
                 var dapperParametersForPrimaryKeys = primaryKeyColumns.GetDapperProperties();
 
-                stringBuilder.AppendLine($"{PadBy(2)}public async Task<int> Update{table.TableName.RemovePluralization()}({methodParameters})");
+                stringBuilder.AppendLine($"{PadBy(1)}public async Task<int> Update{table.TableName.RemovePluralization()}({methodParameters})");
+                stringBuilder.AppendLine($"{PadBy(1)}{{");
+                stringBuilder.AppendLine($"{PadBy(2)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
                 stringBuilder.AppendLine($"{PadBy(2)}{{");
-                stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
-                stringBuilder.AppendLine($"{PadBy(3)}{{");
-                stringBuilder.AppendLine($"{PadBy(4)}const string updateQuery = \"UPDATE {table.TableName} SET {sqlWhereClauses} WHERE {sqlWhereClausesForPrimaryKeys}\";");
-                stringBuilder.AppendLine($"{PadBy(4)}var rowsAffected = await db.ExecuteScalarAsync<int>(updateQuery, new {{ {dapperParametersForPrimaryKeys} }});");
-                stringBuilder.AppendLine($"{PadBy(4)}return rowsAffected;");
-                stringBuilder.AppendLine($"{PadBy(3)}}}");
+                stringBuilder.AppendLine($"{PadBy(3)}const string updateQuery = \"UPDATE {table.TableName} SET {sqlWhereClauses} WHERE {sqlWhereClausesForPrimaryKeys}\";");
+                stringBuilder.AppendLine($"{PadBy(3)}var rowsAffected = await db.ExecuteScalarAsync<int>(updateQuery, new {{ {dapperParametersForPrimaryKeys} }});");
+                stringBuilder.AppendLine($"{PadBy(3)}return rowsAffected;");
                 stringBuilder.AppendLine($"{PadBy(2)}}}");
+                stringBuilder.AppendLine($"{PadBy(1)}}}");
             }
             else
             {
-                stringBuilder.AppendLine($"{PadBy(2)}// INFO: There are no primary keys for the Dapper code generation tool to generate update method(s).");
+                stringBuilder.AppendLine($"{PadBy(1)}// INFO: There are no primary keys for the Dapper code generation tool to generate update method(s).");
             }
         }
 
@@ -190,26 +188,26 @@ namespace DapperCodeGenerator.Core.Generators
                 var sqlWhereClausesForPrimaryKeys = primaryKeyColumns.GetSqlWhereClauses();
                 var dapperParametersForPrimaryKeys = primaryKeyColumns.GetDapperProperties();
 
-                stringBuilder.AppendLine($"{PadBy(2)}public async Task<int> Delete{table.TableName.RemovePluralization()}({methodParameters})");
+                stringBuilder.AppendLine($"{PadBy(1)}public async Task<int> Delete{table.TableName.RemovePluralization()}({methodParameters})");
+                stringBuilder.AppendLine($"{PadBy(1)}{{");
+                stringBuilder.AppendLine($"{PadBy(2)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
                 stringBuilder.AppendLine($"{PadBy(2)}{{");
-                stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
-                stringBuilder.AppendLine($"{PadBy(3)}{{");
-                stringBuilder.AppendLine($"{PadBy(4)}const string deleteQuery = \"DELETE {table.TableName} WHERE {sqlWhereClausesForPrimaryKeys}\";");
-                stringBuilder.AppendLine($"{PadBy(4)}var rowsAffected = await db.ExecuteScalarAsync<int>(deleteQuery, new {{ {dapperParametersForPrimaryKeys} }});");
-                stringBuilder.AppendLine($"{PadBy(4)}return rowsAffected;");
-                stringBuilder.AppendLine($"{PadBy(3)}}}");
+                stringBuilder.AppendLine($"{PadBy(3)}const string deleteQuery = \"DELETE {table.TableName} WHERE {sqlWhereClausesForPrimaryKeys}\";");
+                stringBuilder.AppendLine($"{PadBy(3)}var rowsAffected = await db.ExecuteScalarAsync<int>(deleteQuery, new {{ {dapperParametersForPrimaryKeys} }});");
+                stringBuilder.AppendLine($"{PadBy(3)}return rowsAffected;");
                 stringBuilder.AppendLine($"{PadBy(2)}}}");
+                stringBuilder.AppendLine($"{PadBy(1)}}}");
             }
             else
             {
-                stringBuilder.AppendLine($"{PadBy(2)}// INFO: There are no primary keys for the Dapper code generation tool to generate delete method(s).");
+                stringBuilder.AppendLine($"{PadBy(1)}// INFO: There are no primary keys for the Dapper code generation tool to generate delete method(s).");
             }
         }
 
         private static void GenerateDapperMergeMethodsFromTable(StringBuilder stringBuilder, DatabaseTable table)
         {
             // TODO: generate merge method(s)
-            stringBuilder.AppendLine("\t\t// WARNING: The Dapper code generation tool doesn't currently generate merge method(s).");
+            stringBuilder.AppendLine("\t// WARNING: The Dapper code generation tool doesn't currently generate merge method(s).");
         }
 
         private static string PadBy(int quantity, bool useSpaces = false, int spacesMultiplier = 4)

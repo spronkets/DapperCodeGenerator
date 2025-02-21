@@ -6,14 +6,9 @@ using DapperCodeGenerator.Core.Models;
 namespace DapperCodeGenerator.Core.Providers
 {
     [Serializable]
-    public abstract class Provider
+    public abstract class Provider(string connectionString)
     {
-        public string ConnectionString { get; }
-        
-        protected Provider(string connectionString)
-        {
-            ConnectionString = connectionString;
-        }
+        public string ConnectionString { get; } = connectionString;
 
         public List<Database> RefreshDatabases()
         {

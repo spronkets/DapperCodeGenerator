@@ -1,21 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-    </PropertyGroup>
-    <ItemGroup>
-        <PackageReference Include="Dapper" Version="2.1.35" />
-        <PackageReference Include="MySqlConnector" Version="2.2.7" />
-        <PackageReference Include="Npgsql" Version="8.0.5" />
-        <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.6.0" />
-        <PackageReference Include="System.CodeDom" Version="8.0.0" />
-        <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
-    </ItemGroup>
-    <ItemGroup>
-      <None Update="ldap.ora">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="sqlnet.ora">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.1.66" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.1" />
+		<PackageReference Include="MySqlConnector" Version="2.4.0" />
+		<PackageReference Include="Npgsql" Version="9.0.2" />
+		<PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.7.0" />
+		<PackageReference Include="System.CodeDom" Version="9.0.2" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="ldap.ora">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="sqlnet.ora">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 </Project>

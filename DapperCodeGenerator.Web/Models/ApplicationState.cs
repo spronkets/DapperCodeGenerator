@@ -10,7 +10,7 @@ namespace DapperCodeGenerator.Web.Models
         public DbConnectionTypes DbConnectionType { get; set; } = DbConnectionTypes.MsSql;
         public string ConnectionString { get; set; } = "";
         public Provider CurrentProvider { get; set; }
-        public List<Database> Databases { get; set; } = new List<Database>();
+        public List<Database> Databases { get; set; } = [];
         public Database SelectedDatabase { get; set; }
     }
 }

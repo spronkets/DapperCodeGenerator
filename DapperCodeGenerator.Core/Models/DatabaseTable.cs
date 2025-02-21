@@ -12,6 +12,6 @@ namespace DapperCodeGenerator.Core.Models
 
         public string DataModelName => $"{TableName.CapitalizeFirstLetter().RemovePluralization()}DataModel";
 
-        public List<DatabaseTableColumn> Columns { get; set; } = new List<DatabaseTableColumn>();
+        public List<DatabaseTableColumn> Columns { get; set; } = [];
     }
 }

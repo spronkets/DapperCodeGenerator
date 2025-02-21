@@ -1,29 +1,20 @@
-﻿using System;
+﻿using DapperCodeGenerator.Core.Enumerations;
+using DapperCodeGenerator.Core.Models;
+using Microsoft.Data.SqlClient;
+using MySqlConnector;
+using System;
 using System.Collections.Generic;
 using System.Data;
-using MySqlConnector;
 using System.Linq;
-using DapperCodeGenerator.Core.Enumerations;
-using DapperCodeGenerator.Core.Models;
-using System.Data.SqlClient;
-using System.Security.Cryptography;
 
 namespace DapperCodeGenerator.Core.Providers
 {
-    public class MySqlProvider : Provider
+    public class MySqlProvider(string connectionString) : Provider(connectionString)
     {
-        //private readonly string[] _systemDatabases = { "master", "model", "msdb", "tempdb" };
-        //private readonly string[] _systemTables = { "VersionInfo", "database_firewall_rules" };
-        private readonly string[] _systemDatabases = { "information_schema", "mysql", "performance_schema", "sys" };
-        private readonly string[] _systemTables = {  };
+        private readonly string[] _systemDatabases = ["information_schema", "mysql", "performance_schema", "sys"];
+        private readonly string[] _systemTables = [];
 
-        private readonly MySqlConnectionStringBuilder _connectionStringBuilder;
-
-        public MySqlProvider(string connectionString)
-            : base(connectionString)
-        {
-            _connectionStringBuilder = new MySqlConnectionStringBuilder(connectionString) {  };
-        }
+        private readonly MySqlConnectionStringBuilder _connectionStringBuilder = new(connectionString) { };
 
         protected override IEnumerable<Database> GetDatabases()
         {
@@ -170,7 +161,7 @@ namespace DapperCodeGenerator.Core.Providers
                             continue;
                         }
 
-                        if (indexId.IndexOf("PK_", StringComparison.Ordinal) != -1)
+                        if (indexId.Contains("PK_", StringComparison.Ordinal))
                         {
                             column.PrimaryKeys.Add(indexId);
                         }
@@ -187,68 +178,26 @@ namespace DapperCodeGenerator.Core.Providers
 
         protected override Type GetClrType(string dbTypeName, bool isNullable)
         {
-            switch (dbTypeName)
+            return dbTypeName switch
             {
-                case "bigint":
-                    return isNullable ? typeof(long?) : typeof(long);
-
-                case "binary":
-                case "image":
-                case "timestamp":
-                case "varbinary":
-                    return typeof(byte[]);
-
-                case "bit":
-                    return isNullable ? typeof(bool?) : typeof(bool);
-
-                case "char":
-                case "nchar":
-                case "ntext":
-                case "nvarchar":
-                case "text":
-                case "varchar":
-                case "xml":
-                    return typeof(string);
-
-                case "datetime":
-                case "smalldatetime":
-                case "date":
-                case "time":
-                case "datetime2":
-                    return isNullable ? typeof(DateTime?) : typeof(DateTime);
-
-                case "decimal":
-                case "money":
-                case "smallmoney":
-                    return isNullable ? typeof(decimal?) : typeof(decimal);
-
-                case "float":
-                    return isNullable ? typeof(double?) : typeof(double);
-
-                case "int":
-                    return isNullable ? typeof(int?) : typeof(int);
-
-                case "real":
-                    return isNullable ? typeof(float?) : typeof(float);
-
-                case "uniqueidentifier":
-                    return isNullable ? typeof(Guid?) : typeof(Guid);
-
-                case "smallint":
-                    return isNullable ? typeof(short?) : typeof(short);
-
-                case "tinyint":
-                    return isNullable ? typeof(byte?) : typeof(byte);
-
-                case "structured":
-                    return typeof(DataTable);
-
-                case "datetimeoffset":
-                    return isNullable ? typeof(DateTimeOffset?) : typeof(DateTimeOffset);
-
-                default:
-                    return typeof(object);
-            }
+                "bigint" => isNullable ? typeof(long?) : typeof(long),
+                "binary" or "image" or "timestamp" or "varbinary" => typeof(byte[]),
+                "bit" => isNullable ? typeof(bool?) : typeof(bool),
+                "char" or "nchar" or "ntext" or "nvarchar" or "text" or "varchar" or "xml" => typeof(string),
+                "datetime" or "smalldatetime" or "date" or "time" or "datetime2" => isNullable
+                    ? typeof(DateTime?)
+                    : typeof(DateTime),
+                "decimal" or "money" or "smallmoney" => isNullable ? typeof(decimal?) : typeof(decimal),
+                "float" => isNullable ? typeof(double?) : typeof(double),
+                "int" => isNullable ? typeof(int?) : typeof(int),
+                "real" => isNullable ? typeof(float?) : typeof(float),
+                "uniqueidentifier" => isNullable ? typeof(Guid?) : typeof(Guid),
+                "smallint" => isNullable ? typeof(short?) : typeof(short),
+                "tinyint" => isNullable ? typeof(byte?) : typeof(byte),
+                "structured" => typeof(DataTable),
+                "datetimeoffset" => isNullable ? typeof(DateTimeOffset?) : typeof(DateTimeOffset),
+                _ => typeof(object)
+            };
         }
     }
 }
