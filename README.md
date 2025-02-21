@@ -3,10 +3,9 @@ Simple C# Code Generator to create Database Models and Dapper CRUD to reduce man
 
 ### Instructions
 1. Clone or download the repository
-2. Open the solution file (DapperCodeGenerator.sln) in Visual Studio 2017
+2. Open the solution file (DapperCodeGenerator.sln) in Visual Studio
 3. Make sure the Web project is set as the startup project
-4. Start/run with IIS
-    * I run it with IIS Express from Visual Studio 2017, you can run it however you want
+4. Start/run with Visual Studio
 5. Navigate to the site
 6. Select the Connection Type
     * If you want further support for an existing or any other DB types feel free to make a PR and/or submit a ticket, just know I won't prioritize it
