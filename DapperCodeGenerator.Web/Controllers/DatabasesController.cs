@@ -5,21 +5,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DapperCodeGenerator.Web.Controllers
 {
-    public class DatabasesController : Controller
+    public class DatabasesController(ApplicationState state) : Controller
     {
-        private readonly ApplicationState _state;
-
-        public DatabasesController(ApplicationState state)
-        {
-            this._state = state;
-        }
-
         [HttpGet]
         public ActionResult Index()
         {
             UpdateState(DbConnectionTypes.MsSql);
 
-            return View(_state);
+            return View(state);
         }
 
         [HttpGet]
@@ -27,7 +20,7 @@ namespace DapperCodeGenerator.Web.Controllers
         {
             UpdateState(connectionType);
 
-            return View("Index", _state);
+            return View("Index", state);
         }
 
         [HttpGet]
@@ -35,17 +28,17 @@ namespace DapperCodeGenerator.Web.Controllers
         {
             UpdateState(connectionType, connectionString);
 
-            _state.Databases = _state.CurrentProvider?.RefreshDatabases();
+            state.Databases = state.CurrentProvider?.RefreshDatabases();
 
-            return View("Index", _state);
+            return View("Index", state);
         }
 
         [HttpGet]
         public ActionResult SelectDatabase(string databaseName)
         {
-            _state.SelectedDatabase = _state.CurrentProvider?.SelectDatabase(_state.Databases, databaseName);
+            state.SelectedDatabase = state.CurrentProvider?.SelectDatabase(state.Databases, databaseName);
 
-            return View("Index", _state);
+            return View("Index", state);
         }
 
         private void UpdateState(DbConnectionTypes connectionType, string connectionString = null)
@@ -55,35 +48,35 @@ namespace DapperCodeGenerator.Web.Controllers
                 connectionString = GetDefaultConnectionString(connectionType);
             }
 
-            _state.DbConnectionType = connectionType;
-            _state.ConnectionString = connectionString;
-            _state.CurrentProvider = GetProvider(connectionType, connectionString);
-            _state.Databases = null;
-            _state.SelectedDatabase = null;
+            state.DbConnectionType = connectionType;
+            state.ConnectionString = connectionString;
+            state.CurrentProvider = GetProvider(connectionType, connectionString);
+            state.Databases = null;
+            state.SelectedDatabase = null;
         }
 
-        private string GetDefaultConnectionString(DbConnectionTypes connectionType)
+        private static string GetDefaultConnectionString(DbConnectionTypes connectionType)
         {
-            switch (connectionType)
+            return connectionType switch
             {
-                case DbConnectionTypes.MsSql:
-                    return "Data Source=localhost;Integrated Security=True;";
-                case DbConnectionTypes.Postgres:
-                    return "Server=localhost;Port=5432;User Id=postgres;Password=postgres;";
-                case DbConnectionTypes.Oracle:
-                    return "Data Source=127.0.0.1:1521/xe;User Id=oracle;Password=oracle;";
-                default:
-                    return null;
-            }
+                DbConnectionTypes.MsSql => "Data Source=localhost;Integrated Security=True;TrustServerCertificate=True;",
+                DbConnectionTypes.MySql => "Server=127.0.0.1;Port=3306;User Id=root;Password=mysql;",
+                DbConnectionTypes.Postgres => "Server=localhost;Port=5432;User Id=postgres;Password=postgres;",
+                DbConnectionTypes.Oracle => "Data Source=127.0.0.1:1521/xe;User Id=oracle;Password=oracle;",
+                _ => null
+            };
         }
 
-        private Provider GetProvider(DbConnectionTypes connectionType, string connectionString)
+        private static Provider GetProvider(DbConnectionTypes connectionType, string connectionString)
         {
             Provider provider;
             switch (connectionType)
             {
                 case DbConnectionTypes.MsSql:
                     provider = new MsSqlProvider(connectionString);
+                    break;
+                case DbConnectionTypes.MySql:
+                    provider = new MySqlProvider(connectionString);
                     break;
                 case DbConnectionTypes.Postgres:
                     provider = new PostgresProvider(connectionString);

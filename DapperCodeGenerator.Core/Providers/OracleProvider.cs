@@ -178,49 +178,19 @@ namespace DapperCodeGenerator.Core.Providers
                 return isNullable ? typeof(DateTime?) : typeof(DateTime);
             }
 
-            switch (dbTypeName)
+            return dbTypeName switch
             {
-                case "INTERVAL YEAR TO MONTH":
-                    return isNullable ? typeof(long?) : typeof(long);
-
-                case "BFILE":
-                case "BLOB":
-                case "LONG RAW":
-                    return typeof(byte[]);
-
-                case "RAW":
-                    return typeof(Guid);
-
-                case "BIT":
-                    return isNullable ? typeof(bool?) : typeof(bool);
-
-                case "CHAR":
-                case "CLOB":
-                case "LONG":
-                case "NCHAR":
-                case "NCLOB":
-                case "REF":
-                case "ROWID":
-                case "UROWID":
-                case "VARCHAR2":
-                case "NVARCHAR2":
-                case "XMLType":
-                    return typeof(string);
-
-                case "DATE":
-                    return isNullable ? typeof(DateTime?) : typeof(DateTime);
-
-                case "BINARY_DOUBLE":
-                case "BINARY_FLOAT":
-                case "BINARY_INTEGER":
-                case "NUMBER":
-                case "PLS_INTEGER":
-                case "FLOAT":
-                    return isNullable ? typeof(decimal?) : typeof(decimal);
-
-                default:
-                    return typeof(object);
-            }
+                "INTERVAL YEAR TO MONTH" => isNullable ? typeof(long?) : typeof(long),
+                "BFILE" or "BLOB" or "LONG RAW" => typeof(byte[]),
+                "RAW" => typeof(Guid),
+                "BIT" => isNullable ? typeof(bool?) : typeof(bool),
+                "CHAR" or "CLOB" or "LONG" or "NCHAR" or "NCLOB" or "REF" or "ROWID" or "UROWID" or "VARCHAR2"
+                    or "NVARCHAR2" or "XMLType" => typeof(string),
+                "DATE" => isNullable ? typeof(DateTime?) : typeof(DateTime),
+                "BINARY_DOUBLE" or "BINARY_FLOAT" or "BINARY_INTEGER" or "NUMBER" or "PLS_INTEGER" or "FLOAT" =>
+                    isNullable ? typeof(decimal?) : typeof(decimal),
+                _ => typeof(object)
+            };
         }
     }
 }

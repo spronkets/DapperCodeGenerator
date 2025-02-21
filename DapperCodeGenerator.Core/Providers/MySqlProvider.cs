@@ -1,6 +1,7 @@
 ﻿using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
 using Microsoft.Data.SqlClient;
+using MySqlConnector;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -8,19 +9,19 @@ using System.Linq;
 
 namespace DapperCodeGenerator.Core.Providers
 {
-    public class MsSqlProvider(string connectionString) : Provider(connectionString)
+    public class MySqlProvider(string connectionString) : Provider(connectionString)
     {
-        private readonly string[] _systemDatabases = ["master", "model", "msdb", "tempdb"];
-        private readonly string[] _systemTables = ["VersionInfo", "database_firewall_rules"];
+        private readonly string[] _systemDatabases = ["information_schema", "mysql", "performance_schema", "sys"];
+        private readonly string[] _systemTables = [];
 
-        private readonly SqlConnectionStringBuilder _connectionStringBuilder = new(connectionString) { InitialCatalog = "" };
+        private readonly MySqlConnectionStringBuilder _connectionStringBuilder = new(connectionString) { };
 
         protected override IEnumerable<Database> GetDatabases()
         {
             DataTable databases = null;
             try
             {
-                using var db = new SqlConnection(_connectionStringBuilder.ToString());
+                using var db = new MySqlConnection(_connectionStringBuilder.ToString());
                 db.Open();
                 databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
                 db.Close();
@@ -37,7 +38,7 @@ namespace DapperCodeGenerator.Core.Providers
 
             foreach (DataRow databaseRow in databases.Rows)
             {
-                var databaseName = databaseRow.ItemArray[0].ToString();
+                var databaseName = databaseRow.ItemArray[1].ToString();
 
                 if (_systemDatabases.Any(d => d.Equals(databaseName, StringComparison.InvariantCultureIgnoreCase)))
                 {
@@ -46,7 +47,7 @@ namespace DapperCodeGenerator.Core.Providers
 
                 var database = new Database
                 {
-                    ConnectionType = DbConnectionTypes.MsSql,
+                    ConnectionType = DbConnectionTypes.MySql,
                     DatabaseName = databaseName
                 };
 
@@ -59,9 +60,12 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTables = null;
             try
             {
-                using var db = new SqlConnection($"{_connectionStringBuilder};Initial Catalog={databaseName};");
+                using var db = new MySqlConnection($"{_connectionStringBuilder};Database={databaseName};");
                 db.Open();
-                selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
+                //selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
+                string[] restrictions = new string[4];
+                restrictions[1] = databaseName;
+                selectedDatabaseTables = db.GetSchema("Tables", restrictions);
                 db.Close();
             }
             catch (Exception exc)
@@ -85,7 +89,7 @@ namespace DapperCodeGenerator.Core.Providers
 
                 var table = new DatabaseTable
                 {
-                    ConnectionType = DbConnectionTypes.MsSql,
+                    ConnectionType = DbConnectionTypes.MySql,
                     DatabaseName = databaseName,
                     TableName = tableName
                 };
@@ -102,10 +106,10 @@ namespace DapperCodeGenerator.Core.Providers
             DataTable selectedDatabaseTableForeignKeyColumns = null;
             try
             {
-                using var db = new SqlConnection($"{_connectionStringBuilder};Initial Catalog={databaseName};");
+                using var db = new MySqlConnection($"{_connectionStringBuilder};Database={databaseName};");
                 db.Open();
                 var columnRestrictions = new string[3];
-                columnRestrictions[0] = databaseName;
+                columnRestrictions[1] = databaseName;
                 columnRestrictions[2] = tableName;
 
                 selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
@@ -135,7 +139,7 @@ namespace DapperCodeGenerator.Core.Providers
 
                 var column = new DatabaseTableColumn
                 {
-                    ConnectionType = DbConnectionTypes.MsSql,
+                    ConnectionType = DbConnectionTypes.MySql,
                     DatabaseName = databaseName,
                     TableName = tableName,
                     ColumnName = columnName,

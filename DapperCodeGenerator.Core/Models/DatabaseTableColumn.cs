@@ -16,13 +16,13 @@ namespace DapperCodeGenerator.Core.Models
         public string TypeNamespace { get; set; }
         public int MaxLength { get; set; }
 
-        public List<string> PrimaryKeys { get; set; } = new List<string>();
+        public List<string> PrimaryKeys { get; set; } = [];
         public bool IsPrimaryKey => PrimaryKeys?.Count > 0;
 
-        public List<string> UniqueKeys { get; set; } = new List<string>();
+        public List<string> UniqueKeys { get; set; } = [];
         public bool IsUniqueKey => UniqueKeys?.Count > 0;
 
-        public List<string> ForeignKeys { get; set; } = new List<string>();
+        public List<string> ForeignKeys { get; set; } = [];
         public bool IsForeignKey => ForeignKeys?.Count > 0;
     }
 }

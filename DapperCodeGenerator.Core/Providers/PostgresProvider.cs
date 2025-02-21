@@ -1,28 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
-using DapperCodeGenerator.Core.Enumerations;
+﻿using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
+using Microsoft.Data.SqlClient;
 using Npgsql;
 using NpgsqlTypes;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
 
 namespace DapperCodeGenerator.Core.Providers
 {
-    public class PostgresProvider : Provider
+    public class PostgresProvider(string connectionString) : Provider(connectionString)
     {
-        private readonly string[] _systemDatabases = { "system", "postgres", "template0", "template1" };
-        private readonly string[] _systemTables = { "VersionInfo", "pg_", "sql_" };
+        private readonly string[] _systemDatabases = ["system", "postgres", "template0", "template1"];
+        private readonly string[] _systemTables = ["VersionInfo", "pg_", "sql_"];
 
-        private readonly NpgsqlConnectionStringBuilder _connectionStringBuilder;
-
-        public PostgresProvider(string connectionString)
-            : base(connectionString)
-        {
-            _connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
-            _connectionStringBuilder.Database = "";
-        }
+        private readonly NpgsqlConnectionStringBuilder _connectionStringBuilder = new(connectionString) { Database = "" };
 
         protected override IEnumerable<Database> GetDatabases()
         {
@@ -167,84 +160,31 @@ namespace DapperCodeGenerator.Core.Providers
 
         protected override Type GetClrType(string dbTypeName, bool isNullable)
         {
-            switch (dbTypeName)
+            return dbTypeName switch
             {
-                case "int8":
-                    return isNullable ? typeof(long?) : typeof(long);
-
-                case "bytea":
-                    return typeof(byte[]);
-
-                case "bool":
-                    return isNullable ? typeof(bool?) : typeof(bool);
-
-                case "text":
-                case "varchar":
-                case "bpchar":
-                case "citext":
-                case "json":
-                case "jsonb":
-                case "xml":
-                case "name":
-                    return typeof(string);
-
-                case "point":
-                    return typeof(NpgsqlPoint);
-
-                case "lseg":
-                    return typeof(NpgsqlLSeg);
-
-                case "path":
-                    return typeof(NpgsqlPath);
-
-                case "polygon":
-                    return typeof(NpgsqlPolygon);
-
-                case "line":
-                    return typeof(NpgsqlLine);
-
-                case "circle":
-                    return typeof(NpgsqlCircle);
-
-                case "box":
-                    return typeof(NpgsqlBox);
-
-                case "date":
-                case "timestamp":
-                case "timestamptz":
-                    return isNullable ? typeof(DateTime?) : typeof(DateTime);
-
-                case "numeric":
-                case "money":
-                    return isNullable ? typeof(decimal?) : typeof(decimal);
-
-                case "float8":
-                    return isNullable ? typeof(double?) : typeof(double);
-
-                case "int4":
-                    return isNullable ? typeof(int?) : typeof(int);
-
-                case "float4":
-                    return isNullable ? typeof(float?) : typeof(float);
-
-                case "uuid":
-                    return isNullable ? typeof(Guid?) : typeof(Guid);
-
-                case "int2":
-                    return isNullable ? typeof(short?) : typeof(short);
-
-                case "tinyint":
-                    return isNullable ? typeof(byte?) : typeof(byte);
-
-                case "structured":
-                    return typeof(DataTable);
-
-                case "timetz":
-                    return isNullable ? typeof(DateTimeOffset?) : typeof(DateTimeOffset);
-
-                default:
-                    return typeof(object);
-            }
+                "int8" => isNullable ? typeof(long?) : typeof(long),
+                "bytea" => typeof(byte[]),
+                "bool" => isNullable ? typeof(bool?) : typeof(bool),
+                "text" or "varchar" or "bpchar" or "citext" or "json" or "jsonb" or "xml" or "name" => typeof(string),
+                "point" => typeof(NpgsqlPoint),
+                "lseg" => typeof(NpgsqlLSeg),
+                "path" => typeof(NpgsqlPath),
+                "polygon" => typeof(NpgsqlPolygon),
+                "line" => typeof(NpgsqlLine),
+                "circle" => typeof(NpgsqlCircle),
+                "box" => typeof(NpgsqlBox),
+                "date" or "timestamp" or "timestamptz" => isNullable ? typeof(DateTime?) : typeof(DateTime),
+                "numeric" or "money" => isNullable ? typeof(decimal?) : typeof(decimal),
+                "float8" => isNullable ? typeof(double?) : typeof(double),
+                "int4" => isNullable ? typeof(int?) : typeof(int),
+                "float4" => isNullable ? typeof(float?) : typeof(float),
+                "uuid" => isNullable ? typeof(Guid?) : typeof(Guid),
+                "int2" => isNullable ? typeof(short?) : typeof(short),
+                "tinyint" => isNullable ? typeof(byte?) : typeof(byte),
+                "structured" => typeof(DataTable),
+                "timetz" => isNullable ? typeof(DateTimeOffset?) : typeof(DateTimeOffset),
+                _ => typeof(object)
+            };
         }
     }
 }

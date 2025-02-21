@@ -28,18 +28,15 @@ namespace DapperCodeGenerator.Core.Generators
                 dataModelNamespace = $"DapperCodeGenerator.{table.DatabaseName.CapitalizeFirstLetter()}.Models";
             }
 
-            stringBuilder.AppendLine($"namespace {dataModelNamespace}");
-            stringBuilder.AppendLine("{");
+            stringBuilder.AppendLine($"namespace {dataModelNamespace};\n");
 
-            stringBuilder.AppendLine($"\tpublic class {table.DataModelName}");
-            stringBuilder.AppendLine("\t{");
+            stringBuilder.AppendLine($"public class {table.DataModelName}");
+            stringBuilder.AppendLine("{");
 
             foreach (var column in table.Columns)
             {
-                stringBuilder.AppendLine($"\t\tpublic {column.Type.GetNameForCoding()} {column.ColumnName} {{ get; set; }}");
+                stringBuilder.AppendLine($"\tpublic {column.Type.GetNameForCoding()} {column.ColumnName} {{ get; set; }}");
             }
-
-            stringBuilder.AppendLine("\t}");
 
             stringBuilder.AppendLine("}");
 
