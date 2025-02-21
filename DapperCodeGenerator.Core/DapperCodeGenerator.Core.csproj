@@ -4,6 +4,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Dapper" Version="2.1.35" />
+        <PackageReference Include="MySqlConnector" Version="2.2.7" />
         <PackageReference Include="Npgsql" Version="8.0.5" />
         <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.6.0" />
         <PackageReference Include="System.CodeDom" Version="8.0.0" />

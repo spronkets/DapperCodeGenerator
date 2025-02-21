@@ -68,6 +68,8 @@ namespace DapperCodeGenerator.Web.Controllers
             {
                 case DbConnectionTypes.MsSql:
                     return "Data Source=localhost;Integrated Security=True;";
+                case DbConnectionTypes.MySql:
+                    return "Server=127.0.0.1;Port=3306;User Id=root;Password=mysql;";
                 case DbConnectionTypes.Postgres:
                     return "Server=localhost;Port=5432;User Id=postgres;Password=postgres;";
                 case DbConnectionTypes.Oracle:
@@ -84,6 +86,9 @@ namespace DapperCodeGenerator.Web.Controllers
             {
                 case DbConnectionTypes.MsSql:
                     provider = new MsSqlProvider(connectionString);
+                    break;
+                case DbConnectionTypes.MySql:
+                    provider = new MySqlProvider(connectionString);
                     break;
                 case DbConnectionTypes.Postgres:
                     provider = new PostgresProvider(connectionString);
