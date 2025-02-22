@@ -1,4 +1,5 @@
-﻿using DapperCodeGenerator.Core.Enumerations;
+﻿using Dapper;
+using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
 using Microsoft.Data.SqlClient;
 using Npgsql;
@@ -12,7 +13,7 @@ namespace DapperCodeGenerator.Core.Providers
 {
     public class PostgresProvider(string connectionString) : Provider(connectionString)
     {
-        private readonly string[] _systemDatabases = ["system", "postgres", "template0", "template1"];
+        private readonly string[] _systemDatabases = ["system", "template0", "template1"];
         private readonly string[] _systemTables = ["VersionInfo", "pg_", "sql_"];
 
         private readonly NpgsqlConnectionStringBuilder _connectionStringBuilder = new(connectionString) { Database = "" };
@@ -87,19 +88,23 @@ namespace DapperCodeGenerator.Core.Providers
         protected override IEnumerable<DatabaseTableColumn> GetDatabaseTableColumns(string databaseName, string tableName)
         {
             DataTable selectedDatabaseTableColumns = null;
+            List<dynamic> selectedDatabaseTableConstraints = null;
 
-            DataTable selectedDatabaseTablePrimaryColumns = null;
             try
             {
                 using var db = new NpgsqlConnection($"{_connectionStringBuilder};Database={databaseName};");
                 db.Open();
+
                 var columnRestrictions = new string[3];
                 columnRestrictions[0] = databaseName;
                 columnRestrictions[2] = tableName;
 
                 selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
 
-                selectedDatabaseTablePrimaryColumns = db.GetSchema(SqlClientMetaDataCollectionNames.IndexColumns, columnRestrictions);
+                selectedDatabaseTableConstraints = db.Query(
+                    "SELECT a.attname, c.conname, c.contype FROM pg_constraint c JOIN pg_attribute a ON a.attnum = ANY(c.conkey) WHERE c.conrelid = @table::regclass AND (c.contype = 'p' OR c.contype = 'u')",
+                    new { table = tableName }).ToList();
+
                 db.Close();
             }
             catch (Exception exc)
@@ -130,24 +135,19 @@ namespace DapperCodeGenerator.Core.Providers
                         MaxLength = maxLength
                     };
 
-                    if (selectedDatabaseTablePrimaryColumns != null)
+                    if (selectedDatabaseTableConstraints != null)
                     {
-                        foreach (DataRow indexColumnRow in selectedDatabaseTablePrimaryColumns.Rows)
+                        foreach (var constraint in selectedDatabaseTableConstraints)
                         {
-                            var indexId = indexColumnRow[3].ToString();
-                            var indexColumnName = indexColumnRow[4].ToString();
-
-                            if (indexColumnName == columnName)
+                            if (constraint.attname == columnName)
                             {
-                                if (indexId.StartsWith("pk_", StringComparison.InvariantCultureIgnoreCase) ||
-                                    indexId.EndsWith("_pk", StringComparison.InvariantCultureIgnoreCase) ||
-                                    indexId.EndsWith("_pkey", StringComparison.InvariantCultureIgnoreCase))
+                                if (constraint.contype == 'p')
                                 {
-                                    column.PrimaryKeys.Add(indexId);
+                                    column.PrimaryKeys.Add(constraint.conname);
                                 }
-                                else
+                                else if (constraint.contype == 'u')
                                 {
-                                    column.UniqueKeys.Add(indexId);
+                                    column.UniqueKeys.Add(constraint.conname);
                                 }
                             }
                         }
