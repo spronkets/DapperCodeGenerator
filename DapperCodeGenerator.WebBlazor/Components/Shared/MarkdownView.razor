@@ -1,0 +1,14 @@
+﻿@using Markdig
+@using Microsoft.AspNetCore.Components
+
+<div>@RenderedHtml</div>
+
+@code {
+    [Parameter]
+    public string Markdown { get; set; } = "";
+
+    private MarkupString RenderedHtml =>
+        (string.IsNullOrEmpty(Markdown))
+            ? new MarkupString("")
+            : new MarkupString(Markdown.ToHtml());
+}

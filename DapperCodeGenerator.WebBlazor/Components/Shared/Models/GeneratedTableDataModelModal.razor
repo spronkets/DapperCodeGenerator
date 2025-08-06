@@ -1,0 +1,32 @@
+﻿<Modal>
+    <Trigger Context="modalId">
+        <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#@modalId">
+            Data Model
+        </button>
+    </Trigger>
+
+    <Header>
+        <h5 class="modal-title align-content-center">
+            <span class="fw-semibold">Database:</span> @Model?.DatabaseName
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" height="24" width="24"
+                stroke-width="1.5" stroke="currentColor" class="">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+            <span class="fw-semibold">Table:</span> @Model?.TableName
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+    </Header>
+
+    <Body>
+        <TableDataModel Model="Model" />
+    </Body>
+</Modal>
+
+@code {
+
+    [Parameter]
+    public DatabaseTable? Model { get; set; }
+
+    private string modalId = $"model-modal-{Guid.NewGuid()}";
+
+}

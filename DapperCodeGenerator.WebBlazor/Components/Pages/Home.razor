@@ -1,0 +1,172 @@
+﻿@page "/"
+@inject ILogger<Home> Logger
+
+<PageTitle>Home</PageTitle>
+
+<EditForm Model="Model" OnSubmit="HandleConnect">
+    <div class="d-flex gap-4 align-items-end">
+        <div class="form-group">
+            <label for="connectionType" class="fw-semibold mb-1 pe-3">Connection Type</label>
+            <select class="form-select" id="connectionType" @onchange="OnChange">
+                <option value="@DbConnectionTypes.MsSql">@DbConnectionTypes.MsSql</option>
+                <option value="@DbConnectionTypes.Postgres">@DbConnectionTypes.Postgres</option>
+                <option value="@DbConnectionTypes.Oracle">@DbConnectionTypes.Oracle</option>
+                <option value="@DbConnectionTypes.MySql">@DbConnectionTypes.MySql</option>
+            </select>
+        </div>
+        <div class="form-group flex-grow-1">
+            <label for="connectionString" class="mb-1 fw-semibold">Connection String</label>
+            <InputText class="form-control" id="connectionString" @bind-Value="Model.ConnectionString"
+                placeholder="Enter connection string" />
+        </div>
+        <div>
+            <button type="submit" class="btn btn-primary">Connect</button>
+        </div>
+    </div>
+</EditForm>
+
+
+@if (Model.Databases is not null)
+{
+    @if (Model.Databases.Count == 0)
+    {
+        <div class="mt-5 alert alert-warning" role="alert">
+            No databases found. If you know the server you are connecting to has databases, this may be due to an invalid
+            connection string.
+        </div>
+    }
+    else
+    {
+        <div class="mt-4">
+            <h4 class="mb-2">Database(s)</h4>
+
+            <div class="row">
+                <div class="col col-lg-4">
+                    <select class="form-select" id="databaseSelect" name="databaseSelect" @onchange="OnDatabaseSelected">
+                        <option value="">Select Database...</option>
+                        @foreach (var item in Model.Databases)
+                        {
+                            <option value="@item.DatabaseName">@item.DatabaseName</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.SelectedDatabase is not null)
+{
+    <div class="mt-3">
+        <div class="d-flex justify-content-end">
+            @if (Model.SelectedDatabase.Tables.Count != 0)
+            {
+                <span class="btn-group btn-group-sm float-end">
+                    <GeneratedAllTablesDataModelModal Model="Model.SelectedDatabase.Tables" />
+                    <GeneratedAllTablesDapperModal Model="Model.SelectedDatabase" />
+                </span>
+            }
+        </div>
+    </div>
+
+    @if (Model.SelectedDatabase.Tables.Count == 0)
+    {
+        <p>No tables found within <strong>@Model.SelectedDatabase.DatabaseName</strong>. If there are tables, try refreshing.
+        </p>
+    }
+    else
+    {
+        <table class="table table-striped table-bordered table-hover">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Table Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 1; i <= Model.SelectedDatabase.Tables.Count; i++)
+                {
+                    var table = Model.SelectedDatabase.Tables[i - 1];
+
+                    <tr>
+                        <th class="align-middle" scope="row">@i</th>
+                        <td>
+                            <span class="align-middle">@table.TableName</span>
+                            <span class="btn-group btn-group-sm float-end">
+                                <GeneratedTableDataModelModal Model="table" />
+                                <GeneratedTableDapperModal Model="table" />
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+
+    public ApplicationState Model { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        Model.ConnectionString = GetDefaultConnectionString(Model.DbConnectionType);
+    }
+
+    private void HandleConnect()
+    {
+        Logger.LogInformation("Database connection type: {DbConnectionType}", Model.DbConnectionType);
+        Logger.LogInformation("Database connection string: {ConnectionString}", Model.ConnectionString);
+        Model.CurrentProvider = GetProvider(Model.DbConnectionType, Model.ConnectionString);
+        Model.Databases = Model.CurrentProvider.RefreshDatabases();
+    }
+
+    private void OnChange(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<DbConnectionTypes>(e.Value?.ToString(), out var connectionType))
+        {
+            Model.DbConnectionType = connectionType;
+            Model.ConnectionString = GetDefaultConnectionString(connectionType);
+        }
+    }
+
+    private void OnDatabaseSelected(ChangeEventArgs e)
+    {
+        var selectedDatabaseName = e.Value?.ToString();
+        Model.SelectedDatabase = Model.CurrentProvider?.SelectDatabase(Model.Databases, selectedDatabaseName);
+    }
+
+    private string GetDefaultConnectionString(DbConnectionTypes connectionType)
+    {
+        return connectionType switch
+        {
+            DbConnectionTypes.MsSql => "Data Source=localhost;Integrated Security=True;TrustServerCertificate=True;",
+            DbConnectionTypes.MySql => "Server=127.0.0.1;Port=3306;User Id=root;Password=mysql;",
+            DbConnectionTypes.Postgres => "Server=localhost;Port=5432;User Id=postgres;Password=postgres;",
+            DbConnectionTypes.Oracle => "Data Source=127.0.0.1:1521/xe;User Id=oracle;Password=oracle;",
+            _ => throw new NotSupportedException($"{connectionType} is not supported.")
+        };
+    }
+
+    private Provider GetProvider(DbConnectionTypes connectionType, string connectionString)
+    {
+        Provider provider = connectionType switch
+        {
+            DbConnectionTypes.MsSql => new MsSqlProvider(connectionString),
+            DbConnectionTypes.MySql => new MySqlProvider(connectionString),
+            DbConnectionTypes.Postgres => new PostgresProvider(connectionString),
+            DbConnectionTypes.Oracle => new OracleProvider(connectionString),
+            _ => throw new NotSupportedException($"Provider not supported for {connectionType} database type.")
+        };
+        return provider;
+    }
+
+    public class ApplicationState
+    {
+        public DbConnectionTypes DbConnectionType { get; set; } = DbConnectionTypes.MsSql;
+        public string ConnectionString { get; set; } = "";
+        public Provider? CurrentProvider { get; set; }
+        public List<Database>? Databases { get; set; }
+        public Database? SelectedDatabase { get; set; } = null;
+    }
+}

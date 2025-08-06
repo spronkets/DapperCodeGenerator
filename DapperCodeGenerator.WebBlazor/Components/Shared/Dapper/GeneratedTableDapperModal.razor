@@ -1,0 +1,49 @@
+﻿<Modal>
+    <Trigger Context="modalId">
+        <button type="button" class="btn btn-sm btn-warning" title="@Model?.TableName Dapper" data-bs-toggle="modal"
+            data-bs-target="#@modalId">
+            Dapper
+        </button>
+    </Trigger>
+
+    <Header>
+        <h5 class="modal-title align-content-center">
+            <span class="fw-semibold">Database:</span> @Model?.DatabaseName
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" height="24" width="24"
+                stroke-width="1.5" stroke="currentColor" class="">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+            <span class="fw-semibold">Table:</span> @Model?.TableName
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+    </Header>
+
+    <Body>
+        <div class="alert alert-info" role="alert">
+            <label for="alt-generators">Alternatives:</label>
+            <ul id="alt-generators">
+                <li><a href="https://github.com/MoonStorm/Dapper.FastCRUD">FastCRUD</a></li>
+                <li><a href="https://github.com/ericdc1/Dapper.SimpleCRUD">SimpleCRUD</a></li>
+            </ul>
+        </div>
+        <div class="alert alert-warning" role="alert">
+            This Dapper code is written using T-SQL syntax and might not be compatible with Postgres, Oracle,
+            and MySQL
+        </div>
+        <h5 class="d-flex align-items-center gap-2">
+            <code id="@modalId-data-name">
+                @($"{Model?.TableName}Repository.cs")
+            </code>
+            <CopyButton ID="@($"{modalId}-data-name")" />
+        </h5>
+        <pre><code id="@modalId-data-code">@DapperGenerator.GenerateDapperFromTable(Model)</code></pre>
+        <CopyButton ID="@($"{modalId}-data-code")" Text="Copy Code" />
+    </Body>
+</Modal>
+
+@code {
+
+    [Parameter]
+    public DatabaseTable? Model { get; set; } = default!;
+    private string modalId = $"dapper-modal-{Guid.NewGuid()}";
+}

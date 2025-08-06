@@ -1,0 +1,58 @@
+﻿<Modal>
+    <Trigger Context="modalId">
+        <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#@modalId">
+            Data Model
+        </button>
+    </Trigger>
+
+    <Header>
+        <h5 class="modal-title align-content-center">
+            <span class="fw-semibold">Database:</span> @Model?.FirstOrDefault()?.DatabaseName
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+    </Header>
+
+    <Body>
+        <div class="d-flex gap-3">
+            <div>
+                <h3 class="">Tables</h3>
+                <ul class="nav flex-column gap-2">
+                    @for (int i = 0; i < Model.Count; i++)
+                    {
+                        var table = Model[i];
+                        var isSelected = _selectedModel == table;
+                        <li class="nav-link cursor-pointer @(isSelected ? "text-primary bg-body-tertiary rounded-3" : "text-black")"
+                            @onclick="() => OnModelSelect(table)">
+                            @table.DataModelName
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <div class="flex-grow-1">
+                <TableDataModel Model="_selectedModel" />
+            </div>
+        </div>
+    </Body>
+</Modal>
+
+@code {
+    private DatabaseTable? _selectedModel;
+
+    [Parameter]
+    public List<DatabaseTable> Model { get; set; } = [];
+
+    protected override void OnParametersSet()
+    {
+        if (Model.Any())
+        {
+            _selectedModel = Model.FirstOrDefault();
+        }
+    }
+
+    private void OnModelSelect(DatabaseTable? model)
+    {
+        _selectedModel = model;
+        StateHasChanged();
+    }
+}
