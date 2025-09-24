@@ -1,0 +1,26 @@
+﻿@inherits LayoutComponentBase
+
+<header class="flex-grow-0">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark" id="navbar">
+        <div class="container">
+            <NavLink class="navbar-brand" href="/"><b>Dapper Code Generator</b></NavLink>
+        </div>
+    </nav>
+</header>
+
+<main role="main" class="flex-grow-1">
+    <div class="container my-3">
+        @Body
+    </div>
+</main>
+
+<footer class="my-2">
+    <div class="container">
+        <small id="footprint" class=""><a href="https://github.com/kcrossman/DapperCodeGenerator">Dapper Code Generator</a> by <b>Kody Crossman</b></small>
+    </div>
+    <div id="blazor-error-ui" data-nosnippet>
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+</footer>

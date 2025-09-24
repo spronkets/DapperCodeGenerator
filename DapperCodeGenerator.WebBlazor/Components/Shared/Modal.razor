@@ -1,0 +1,25 @@
+﻿@Trigger?.Invoke(modalId)
+
+<div id="@modalId" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-fullscreen" role="document">
+        <div class="modal-content">
+            @if (Header is not null)
+            {
+                <div class="modal-header">
+                    @Header
+                </div>
+            }
+            <div class="modal-body">
+                @Body
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string modalId = $"modal-{Guid.NewGuid()}";
+
+    [Parameter] public RenderFragment? Header { get; set; }
+    [Parameter] public RenderFragment? Body { get; set; }
+    [Parameter] public RenderFragment<string>? Trigger { get; set; }
+}
