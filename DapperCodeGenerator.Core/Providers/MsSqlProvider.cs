@@ -1,6 +1,8 @@
-﻿using DapperCodeGenerator.Core.Enumerations;
+﻿using Dapper;
+using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.SqlServer.Types;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -8,190 +10,227 @@ using System.Linq;
 
 namespace DapperCodeGenerator.Core.Providers
 {
+    internal class MsSqlColumnData
+    {
+        public string ColumnName { get; set; } = string.Empty;
+        public string IsNullable { get; set; } = string.Empty;
+        public string DataType { get; set; } = string.Empty;
+        public int? CharacterMaximumLength { get; set; }
+        public int? NumericPrecision { get; set; }
+        public int? NumericScale { get; set; }
+        public string ColumnDefault { get; set; }
+        public int OrdinalPosition { get; set; }
+        public bool? IsIdentity { get; set; }
+        public bool? IsComputed { get; set; }
+    }
+
+    internal class MsSqlConstraint
+    {
+        public string ColumnName { get; set; } = string.Empty;
+        public string ConstraintName { get; set; } = string.Empty;
+        public string ConstraintType { get; set; } = string.Empty;
+    }
+
     public class MsSqlProvider(string connectionString) : Provider(connectionString)
     {
-        private readonly string[] _systemDatabases = ["master", "model", "msdb", "tempdb"];
         private readonly string[] _systemTables = ["VersionInfo", "database_firewall_rules"];
 
         private readonly SqlConnectionStringBuilder _connectionStringBuilder = new(connectionString) { InitialCatalog = "" };
 
         protected override IEnumerable<Database> GetDatabases()
         {
-            DataTable databases = null;
             try
             {
-                using var db = new SqlConnection(_connectionStringBuilder.ToString());
-                db.Open();
-                databases = db.GetSchema(SqlClientMetaDataCollectionNames.Databases);
-                db.Close();
+                using var db = new SqlConnection($"{_connectionStringBuilder}");
+
+                const string databasesQuery = @"
+                    SELECT name as DatabaseName
+                    FROM sys.databases
+                    WHERE state = 0
+                      AND database_id > 4  -- Excludes master(1), tempdb(2), model(3), msdb(4)
+                      AND is_read_only = 0";
+
+                var databases = db.Query<Database>(databasesQuery);
+                Console.WriteLine($"MS SQL databases query returned {databases.Count()} databases");
+                return databases.Select(database =>
+                {
+                    database.ConnectionType = DbConnectionTypes.MsSql;
+                    return database;
+                });
             }
             catch (Exception exc)
             {
                 Console.Error.WriteLine(exc.Message, exc);
-            }
-
-            if (databases == null)
-            {
-                yield break;
-            }
-
-            foreach (DataRow databaseRow in databases.Rows)
-            {
-                var databaseName = databaseRow.ItemArray[0].ToString();
-
-                if (_systemDatabases.Any(d => d.Equals(databaseName, StringComparison.InvariantCultureIgnoreCase)))
-                {
-                    continue;
-                }
-
-                var database = new Database
-                {
-                    ConnectionType = DbConnectionTypes.MsSql,
-                    DatabaseName = databaseName
-                };
-
-                yield return database;
+                return [];
             }
         }
 
         protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName)
         {
-            DataTable selectedDatabaseTables = null;
             try
             {
                 using var db = new SqlConnection($"{_connectionStringBuilder};Initial Catalog={databaseName};");
-                db.Open();
-                selectedDatabaseTables = db.GetSchema(SqlClientMetaDataCollectionNames.Tables);
-                db.Close();
+
+                const string tablesQuery = @"
+                    SELECT TABLE_NAME as TableName
+                    FROM INFORMATION_SCHEMA.TABLES
+                    WHERE TABLE_TYPE = 'BASE TABLE'";
+
+                var tables = db.Query<DatabaseTable>(tablesQuery)
+                    .Where(table => !_systemTables.Any(t => t.Equals(table.TableName, StringComparison.InvariantCultureIgnoreCase)));
+                Console.WriteLine($"MS SQL tables query returned {tables.Count()} filtered tables for database {databaseName}");
+                return tables.Select(table =>
+                {
+                    table.ConnectionType = DbConnectionTypes.MsSql;
+                    table.DatabaseName = databaseName;
+                    return table;
+                });
             }
             catch (Exception exc)
             {
                 Console.Error.WriteLine(exc.Message, exc);
-            }
-
-            if (selectedDatabaseTables == null)
-            {
-                yield break;
-            }
-
-            foreach (DataRow tableRow in selectedDatabaseTables.Rows)
-            {
-                var tableName = tableRow.ItemArray[2].ToString();
-
-                if (_systemTables.Any(t => t.Equals(tableName, StringComparison.InvariantCultureIgnoreCase)))
-                {
-                    continue;
-                }
-
-                var table = new DatabaseTable
-                {
-                    ConnectionType = DbConnectionTypes.MsSql,
-                    DatabaseName = databaseName,
-                    TableName = tableName
-                };
-
-                yield return table;
+                return [];
             }
         }
 
         protected override IEnumerable<DatabaseTableColumn> GetDatabaseTableColumns(string databaseName, string tableName)
         {
-            DataTable selectedDatabaseTableColumns = null;
+            var columns = new List<DatabaseTableColumn>();
 
-            DataTable selectedDatabaseTablePrimaryColumns = null;
-            DataTable selectedDatabaseTableForeignKeyColumns = null;
             try
             {
                 using var db = new SqlConnection($"{_connectionStringBuilder};Initial Catalog={databaseName};");
-                db.Open();
-                var columnRestrictions = new string[3];
-                columnRestrictions[0] = databaseName;
-                columnRestrictions[2] = tableName;
+                
+                const string columnsQuery = @"
+                    SELECT
+                        c.COLUMN_NAME as ColumnName,
+                        c.IS_NULLABLE as IsNullable,
+                        c.DATA_TYPE as DataType,
+                        c.CHARACTER_MAXIMUM_LENGTH as CharacterMaximumLength,
+                        c.NUMERIC_PRECISION as NumericPrecision,
+                        c.NUMERIC_SCALE as NumericScale,
+                        c.COLUMN_DEFAULT as ColumnDefault,
+                        c.ORDINAL_POSITION as OrdinalPosition,
+                        ic.is_identity as IsIdentity,
+                        cc.is_computed as IsComputed
+                    FROM INFORMATION_SCHEMA.COLUMNS c
+                    LEFT JOIN sys.tables t ON t.name = c.TABLE_NAME
+                    LEFT JOIN sys.columns ic ON ic.object_id = t.object_id AND ic.name = c.COLUMN_NAME
+                    LEFT JOIN sys.computed_columns cc ON cc.object_id = t.object_id AND cc.name = c.COLUMN_NAME
+                    WHERE c.TABLE_NAME = @tableName
+                    ORDER BY c.ORDINAL_POSITION";
+                var mssqlColumns = db.Query<MsSqlColumnData>(columnsQuery, new { tableName });
+                Console.WriteLine($"MS SQL columns query returned {mssqlColumns.Count()} columns for table {tableName} in database {databaseName}");
 
-                selectedDatabaseTableColumns = db.GetSchema(SqlClientMetaDataCollectionNames.Columns, columnRestrictions);
+                const string constraintsQuery = @"
+                    SELECT
+                        kcu.COLUMN_NAME as ColumnName,
+                        tc.CONSTRAINT_NAME as ConstraintName,
+                        tc.CONSTRAINT_TYPE as ConstraintType
+                    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+                    JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+                        ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+                        AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA
+                        AND tc.TABLE_NAME = kcu.TABLE_NAME
+                    WHERE tc.TABLE_NAME = @tableName
+                        AND tc.CONSTRAINT_TYPE IN ('PRIMARY KEY', 'UNIQUE', 'FOREIGN KEY')
+                    ORDER BY kcu.ORDINAL_POSITION";
+                var mssqlConstraints = db.Query<MsSqlConstraint>(constraintsQuery, new { tableName });
+                Console.WriteLine($"MS SQL constraints query returned {mssqlConstraints.Count()} constraints for table {tableName} in database {databaseName}");
 
-                selectedDatabaseTablePrimaryColumns = db.GetSchema(SqlClientMetaDataCollectionNames.IndexColumns, columnRestrictions);
-                selectedDatabaseTableForeignKeyColumns = db.GetSchema(SqlClientMetaDataCollectionNames.ForeignKeys, columnRestrictions);
-                db.Close();
+                foreach (var mssqlColumn in mssqlColumns)
+                {
+                    var isNullable = mssqlColumn.IsNullable == "YES";
+                    var type = GetClrType(mssqlColumn.DataType, isNullable);
+                    var maxLength = mssqlColumn.CharacterMaximumLength ?? 0;
+
+                    var column = new DatabaseTableColumn
+                    {
+                        ConnectionType = DbConnectionTypes.MsSql,
+                        DatabaseName = databaseName,
+                        TableName = tableName,
+                        ColumnName = mssqlColumn.ColumnName,
+                        DataType = mssqlColumn.DataType,
+                        Type = type,
+                        TypeNamespace = type.Namespace,
+                        MaxLength = maxLength,
+                        NumericPrecision = mssqlColumn.NumericPrecision,
+                        NumericScale = mssqlColumn.NumericScale,
+                        DefaultValue = mssqlColumn.ColumnDefault,
+                        OrdinalPosition = mssqlColumn.OrdinalPosition,
+                        IsNullable = isNullable,
+                        IsAutoIncrement = mssqlColumn.IsIdentity,
+                        IsComputed = mssqlColumn.IsComputed,
+                        IsGenerated = mssqlColumn.IsComputed
+                    };
+
+                    foreach (var constraint in mssqlConstraints.Where(c => c.ColumnName == mssqlColumn.ColumnName))
+                    {
+                        switch (constraint.ConstraintType)
+                        {
+                            case "PRIMARY KEY":
+                                column.PrimaryKeys.Add(constraint.ConstraintName);
+                                break;
+                            case "UNIQUE":
+                                column.UniqueKeys.Add(constraint.ConstraintName);
+                                break;
+                            case "FOREIGN KEY":
+                                column.ForeignKeys.Add(constraint.ConstraintName);
+                                break;
+                        }
+                    }
+
+                    columns.Add(column);
+                }
             }
             catch (Exception exc)
             {
                 Console.Error.WriteLine(exc.Message, exc);
             }
 
-            if (selectedDatabaseTableColumns == null)
-            {
-                yield break;
-            }
-
-            foreach (DataRow columnRow in selectedDatabaseTableColumns.Rows)
-            {
-                var columnName = columnRow.ItemArray[3].ToString();
-                var isNullable = columnRow.ItemArray[6].ToString() == "YES";
-                var dataType = columnRow.ItemArray[7].ToString();
-                var type = GetClrType(dataType, isNullable);
-                var maxLengthStr = columnRow.ItemArray[8].ToString();
-                int.TryParse(maxLengthStr, out var maxLength);
-
-                var column = new DatabaseTableColumn
-                {
-                    ConnectionType = DbConnectionTypes.MsSql,
-                    DatabaseName = databaseName,
-                    TableName = tableName,
-                    ColumnName = columnName,
-                    DataType = dataType,
-                    Type = type,
-                    TypeNamespace = type.Namespace,
-                    MaxLength = maxLength
-                };
-
-                if (selectedDatabaseTablePrimaryColumns != null)
-                {
-                    foreach (DataRow indexColumnRow in selectedDatabaseTablePrimaryColumns.Rows)
-                    {
-                        var indexId = indexColumnRow[2].ToString();
-                        var indexColumnName = indexColumnRow[6].ToString();
-
-                        if (indexColumnName != columnName)
-                        {
-                            continue;
-                        }
-
-                        if (indexId.Contains("PK_", StringComparison.Ordinal))
-                        {
-                            column.PrimaryKeys.Add(indexId);
-                        }
-                        else
-                        {
-                            column.UniqueKeys.Add(indexId);
-                        }
-                    }
-                }
-
-                yield return column;
-            }
+            return columns;
         }
 
         protected override Type GetClrType(string dbTypeName, bool isNullable)
         {
-            return dbTypeName switch
+            var lowerTypeName = dbTypeName.ToLowerInvariant();
+
+            return lowerTypeName switch
             {
-                "bigint" => isNullable ? typeof(long?) : typeof(long),
-                "binary" or "image" or "timestamp" or "varbinary" => typeof(byte[]),
                 "bit" => isNullable ? typeof(bool?) : typeof(bool),
-                "char" or "nchar" or "ntext" or "nvarchar" or "text" or "varchar" or "xml" => typeof(string),
-                "datetime" or "smalldatetime" or "date" or "time" or "datetime2" => isNullable
-                    ? typeof(DateTime?)
-                    : typeof(DateTime),
-                "decimal" or "money" or "smallmoney" => isNullable ? typeof(decimal?) : typeof(decimal),
-                "float" => isNullable ? typeof(double?) : typeof(double),
-                "int" => isNullable ? typeof(int?) : typeof(int),
-                "real" => isNullable ? typeof(float?) : typeof(float),
-                "uniqueidentifier" => isNullable ? typeof(Guid?) : typeof(Guid),
-                "smallint" => isNullable ? typeof(short?) : typeof(short),
                 "tinyint" => isNullable ? typeof(byte?) : typeof(byte),
-                "structured" => typeof(DataTable),
+                "smallint" => isNullable ? typeof(short?) : typeof(short),
+                "int" => isNullable ? typeof(int?) : typeof(int),
+                "bigint" => isNullable ? typeof(long?) : typeof(long),
+                "real" => isNullable ? typeof(float?) : typeof(float),
+                "float" => isNullable ? typeof(double?) : typeof(double),
+                "decimal" or "numeric" => isNullable ? typeof(decimal?) : typeof(decimal),
+                "money" or "smallmoney" => isNullable ? typeof(decimal?) : typeof(decimal),
+
+                "char" or "nchar" or "varchar" or "nvarchar" => typeof(string),
+                "xml" => typeof(string),
+
+                "date" => isNullable ? typeof(DateOnly?) : typeof(DateOnly),
+                "time" => isNullable ? typeof(TimeOnly?) : typeof(TimeOnly),
+                "datetime" or "datetime2" or "smalldatetime" => isNullable ? typeof(DateTime?) : typeof(DateTime),
                 "datetimeoffset" => isNullable ? typeof(DateTimeOffset?) : typeof(DateTimeOffset),
+
+                "uniqueidentifier" => isNullable ? typeof(Guid?) : typeof(Guid),
+
+                "binary" or "varbinary" => typeof(byte[]),
+                "rowversion" or "timestamp" => typeof(byte[]),
+
+                "structured" => typeof(DataTable),
+
+                "geography" => typeof(SqlGeography),
+                "geometry" => typeof(SqlGeometry),
+                "hierarchyid" => typeof(SqlHierarchyId),
+
+                "image" => typeof(byte[]), // deprecated: use varbinary(max)
+                "ntext" or "text" => typeof(string), // deprecated: use nvarchar(max)/varchar(max)
+
+                // "cursor" => typeof(object),
+                // "sql_variant" => typeof(object),
                 _ => typeof(object)
             };
         }

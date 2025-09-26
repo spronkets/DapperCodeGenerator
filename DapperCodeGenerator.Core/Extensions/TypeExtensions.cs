@@ -17,6 +17,7 @@ namespace DapperCodeGenerator.Core.Extensions
             var typeRef = new CodeTypeReference(type);
             var typeOutput = compiler.GetTypeOutput(typeRef);
             typeOutput = typeOutput.Replace("System.", "");
+
             if (typeOutput.Contains("Nullable<"))
             {
                 typeOutput = typeOutput.Replace("Nullable", "").Replace(">", "").Replace("<", "") + "?";

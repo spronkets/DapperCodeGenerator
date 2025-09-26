@@ -35,7 +35,7 @@ namespace DapperCodeGenerator.Core.Generators
 
             foreach (var column in table.Columns)
             {
-                stringBuilder.AppendLine($"\tpublic {column.Type.GetNameForCoding()} {column.ColumnName} {{ get; set; }}");
+                stringBuilder.AppendLine($"\tpublic {column.Type.GetNameForCoding()} {column.ColumnName.ToPascalCase()} {{ get; set; }}");
             }
 
             stringBuilder.AppendLine("}");

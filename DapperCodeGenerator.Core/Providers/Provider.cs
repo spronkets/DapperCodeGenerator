@@ -5,7 +5,6 @@ using DapperCodeGenerator.Core.Models;
 
 namespace DapperCodeGenerator.Core.Providers
 {
-    [Serializable]
     public abstract class Provider(string connectionString)
     {
         public string ConnectionString { get; } = connectionString;
@@ -25,11 +24,11 @@ namespace DapperCodeGenerator.Core.Providers
                 return null;
             }
 
-            database.Tables = GetDatabaseTables(databaseName).ToList();
+            database.Tables = [.. GetDatabaseTables(databaseName)];
 
             foreach (var table in database.Tables)
             {
-                table.Columns = GetDatabaseTableColumns(databaseName, table.TableName).ToList();
+                table.Columns = [.. GetDatabaseTableColumns(databaseName, table.TableName)];
             }
 
             return database;

@@ -5,6 +5,7 @@
 	<ItemGroup>
 		<PackageReference Include="Dapper" Version="2.1.66" />
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.1" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 		<PackageReference Include="MySqlConnector" Version="2.4.0" />
 		<PackageReference Include="Npgsql" Version="9.0.3" />
 		<PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.9.1" />

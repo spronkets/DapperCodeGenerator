@@ -1,4 +1,4 @@
-﻿<h5>Properties</h5>
+<h5>Properties</h5>
 <table class="table table-striped table-bordered table-hover">
     <thead class="thead-light">
         <tr>
@@ -14,22 +14,22 @@
 
             <tr>
                 <th scope="row">@(c + 1)</th>
-                <td>
-                    @column.ColumnName
+                <td class="d-flex align-items-center gap-2">
+                    <span>@column.ColumnName</span>
                     @if (column.IsPrimaryKey)
                     {
-                        <i class="material-icons md-18 text-warning align-middle"
-                            title="@column.ColumnName is part of the @(string.Join(", ", column.PrimaryKeys)) Primary Key(s) for @column.TableName">vpn_key</i>
+                        <i class="fas fa-key text-warning"
+                            title="@column.ColumnName is part of the @(string.Join(", ", column.PrimaryKeys)) Primary Key(s) for @column.TableName"></i>
                     }
                     @if (column.IsForeignKey)
                     {
-                        <i class="material-icons md-18 text-danger align-middle"
-                            title="@column.ColumnName is part of the @(string.Join(", ", column.ForeignKeys)) Foreign Key(s) for @column.TableName">vpn_key</i>
+                        <i class="fas fa-link text-danger"
+                            title="@column.ColumnName is part of the @(string.Join(", ", column.ForeignKeys)) Foreign Key(s) for @column.TableName"></i>
                     }
                     @if (column.IsUniqueKey)
                     {
-                        <i class="material-icons md-18 text-muted align-middle"
-                            title="@column.ColumnName is part of the @(string.Join(", ", column.UniqueKeys)) Unique Key(s)/Indexes for @column.TableName">vpn_key</i>
+                        <i class="fas fa-fingerprint text-muted"
+                            title="@column.ColumnName is part of the @(string.Join(", ", column.UniqueKeys)) Unique Key(s)/Indexes for @column.TableName"></i>
                     }
                 </td>
                 <td>
@@ -52,10 +52,10 @@
     <code id="@modelId-data-model-name">
         @($"{Model?.DataModelName}.cs")
     </code>
-    <CopyButton ID="@($"{modelId}-data-model-name")" />
+    <CopyButton ID="@($"{modelId}-data-model-name")" Text="Copy" />
 </h5>
 <pre><code id="@modelId-data-model-code">@DataModelGenerator.GenerateDataModelFromTable(Model)</code></pre>
-<CopyButton ID="@($"{modelId}-data-model-code")" Text="Copy Code" />
+<CopyButton ID="@($"{modelId}-data-model-code")" Text="Copy Code" ShowText="true" />
 
 @code {
     private string modelId = $"{Guid.NewGuid()}";

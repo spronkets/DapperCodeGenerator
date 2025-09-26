@@ -1,90 +1,120 @@
-﻿using Dapper;
+using Dapper;
 using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
-using DapperCodeGenerator.Core.Providers.Oracle;
 using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace DapperCodeGenerator.Core.Providers
 {
-    public class OracleProvider : Provider
+    internal class OracleSchema
     {
-        private readonly OracleConnectionStringBuilder _connectionStringBuilder;
+        public string SchemaName { get; set; } = string.Empty;
+    }
 
-        public OracleProvider(string connectionString)
-            : base(connectionString)
-        {
-            _connectionStringBuilder = new OracleConnectionStringBuilder(connectionString);
+    internal class OracleColumnData
+    {
+        public string ColumnName { get; set; } = string.Empty;
+        public string DataType { get; set; } = string.Empty;
+        public string DataLength { get; set; } = string.Empty;
+        public string Nullable { get; set; } = string.Empty;
+        public int? DataPrecision { get; set; }
+        public int? DataScale { get; set; }
+        public string DataDefault { get; set; }
+        public int ColumnId { get; set; }
+        public bool? IsIdentity { get; set; }
+        public bool? IsGenerated { get; set; }
+    }
 
-            DefaultTypeMap.MatchNamesWithUnderscores = true;
-        }
+    internal class OracleConstraint
+    {
+        public string ColumnName { get; set; } = string.Empty;
+        public string ConstraintName { get; set; } = string.Empty;
+        public string ConstraintType { get; set; } = string.Empty;
+    }
+
+    public class OracleProvider(string connectionString) : Provider(connectionString)
+    {
+        private readonly string[] _systemDatabases = [
+            "ANONYMOUS", "APPQOSSYS", "AUDSYS", "CTXSYS", "DBSFWUSER", "DBSNMP",
+            "DGPDB_INT", "DIP", "DVF", "DVSYS", "GGSYS", "GSMADMIN_INTERNAL",
+            "GSMCATUSER", "GSMROOTUSER", "GSMUSER", "LBACSYS", "MDDATA", "MDSYS",
+            "OPS$ORACLE", "ORACLE_OCM", "OUTLN", "REMOTE_SCHEDULER_AGENT", "SYS",
+            "SYS$UMF", "SYSBACKUP", "SYSDG", "SYSKM", "SYSRAC", "XDB", "XS$NULL"
+        ];
+        private readonly string[] _systemTablePatterns = [
+            "^APPLY", "^AQ", "^BIN", "^CAPTURE", "^DEF", "^HELP$", "^LOGMNR", "^LOGMNRC",
+            "^LOGSTDBY", "^MLOG", "^MVIEW", "^OL", "^PROPAGATION", "^REDO_", "^REPL_",
+            "^ROLLING", "^RUPD", "^SCHEDULER", "^SCHEDULER_", "^SQLPLUS_", "^STREAMS",
+            "^USLOG", "^WRH", "^WRI", "^WRR"
+        ];
+
+        private readonly OracleConnectionStringBuilder _connectionStringBuilder = new(connectionString);
+        private Version _oracleVersion;
 
         protected override IEnumerable<Database> GetDatabases()
         {
-            var databases = new List<Database>();
-
             try
             {
                 using var db = new OracleConnection($"{_connectionStringBuilder}");
+
                 // NOTE: this will include all "Users" AND "Schemas"
-                const string oracleSchemasQuery = @"
-                        SELECT
-                            USERNAME AS SCHEMA_NAME
-                        FROM ALL_USERS
-                        ORDER BY USERNAME";
-                var oracleSchemas = db.Query<OracleSchema>(oracleSchemasQuery);
-                foreach (var oracleSchema in oracleSchemas)
+                string databasesQuery = @"
+                    SELECT
+                        USERNAME as SchemaName
+                    FROM ALL_USERS
+                    ORDER BY USERNAME";
+
+                var schemas = db.Query<OracleSchema>(databasesQuery)
+                    .Where(schema => !_systemDatabases.Any(d => d.Equals(schema.SchemaName, StringComparison.InvariantCultureIgnoreCase)));
+                Console.WriteLine($"Oracle databases query returned {schemas.Count()} filtered schemas");
+                return schemas.Select(schema => new Database
                 {
-                    var database = new Database
-                    {
-                        ConnectionType = DbConnectionTypes.Oracle,
-                        DatabaseName = oracleSchema.SchemaName
-                    };
-                    databases.Add(database);
-                }
+                    ConnectionType = DbConnectionTypes.Oracle,
+                    DatabaseName = schema.SchemaName
+                });
             }
             catch (Exception exc)
             {
                 Console.Error.WriteLine(exc.Message, exc);
+                return [];
             }
-
-            return databases;
         }
 
         protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName)
         {
-            var tables = new List<DatabaseTable>();
-
             try
             {
                 using var db = new OracleConnection($"{_connectionStringBuilder}");
-                const string oracleTablesQuery = @"
-                        SELECT DISTINCT
-                            OBJECT_NAME AS TABLE_NAME
-                        FROM ALL_OBJECTS
-                        WHERE
-                            OBJECT_TYPE = 'TABLE' AND
-                            OWNER = :schemaName";
-                var oracleTables = db.Query<OracleTable>(oracleTablesQuery, new { schemaName = databaseName });
-                foreach (var oracleTable in oracleTables)
+
+                const string tablesQuery = @"
+                    SELECT DISTINCT
+                        OBJECT_NAME as TableName
+                    FROM ALL_OBJECTS
+                    WHERE
+                        OBJECT_TYPE = 'TABLE' AND
+                        OWNER = :schemaName AND
+                        GENERATED = 'N' AND
+                        SECONDARY = 'N' AND
+                        OBJECT_NAME NOT LIKE 'BIN$%'";
+
+                var tables = db.Query<DatabaseTable>(tablesQuery, new { schemaName = databaseName })
+                    .Where(table => !_systemTablePatterns.Any(pattern => Regex.IsMatch(table.TableName, pattern, RegexOptions.IgnoreCase)));
+                Console.WriteLine($"Oracle tables query returned {tables.Count()} filtered tables for schema {databaseName}");
+                return tables.Select(table =>
                 {
-                    var table = new DatabaseTable
-                    {
-                        ConnectionType = DbConnectionTypes.Oracle,
-                        DatabaseName = databaseName,
-                        TableName = oracleTable.TableName
-                    };
-                    tables.Add(table);
-                }
+                    table.ConnectionType = DbConnectionTypes.Oracle;
+                    table.DatabaseName = databaseName;
+                    return table;
+                });
             }
             catch (Exception exc)
             {
                 Console.Error.WriteLine(exc.Message, exc);
+                return [];
             }
-
-            return tables;
         }
 
         protected override IEnumerable<DatabaseTableColumn> GetDatabaseTableColumns(string databaseName, string tableName)
@@ -94,15 +124,13 @@ namespace DapperCodeGenerator.Core.Providers
             try
             {
                 using var db = new OracleConnection($"{_connectionStringBuilder}");
-                const string oracleColumnsQuery = @"
-                        SELECT
-                            COLUMN_NAME,
-                            DATA_TYPE,
-                            DATA_LENGTH,
-                            NULLABLE
-                        FROM ALL_TAB_COLUMNS
-                        WHERE TABLE_NAME = :tableName";
-                var oracleColumns = db.Query<OracleColumn>(oracleColumnsQuery, new { tableName });
+
+                var version = GetOracleVersion(db);
+
+                var columnsQuery = BuildColumnQuery(version);
+
+                var oracleColumns = db.Query<OracleColumnData>(columnsQuery, new { tableName, schemaName = databaseName });
+                Console.WriteLine($"Oracle columns query returned {oracleColumns.Count()} results for table {tableName} in schema {databaseName}");
                 foreach (var oracleColumn in oracleColumns)
                 {
                     var nullable = oracleColumn.Nullable == "Y";
@@ -118,20 +146,29 @@ namespace DapperCodeGenerator.Core.Providers
                         DataType = oracleColumn.DataType,
                         Type = dataType,
                         TypeNamespace = dataType.Namespace,
-                        MaxLength = dataLength
+                        MaxLength = dataLength,
+                        NumericPrecision = oracleColumn.DataPrecision,
+                        NumericScale = oracleColumn.DataScale,
+                        DefaultValue = oracleColumn.DataDefault,
+                        OrdinalPosition = oracleColumn.ColumnId,
+                        IsNullable = nullable,
+                        IsAutoIncrement = oracleColumn.IsIdentity,
+                        IsComputed = false,
+                        IsGenerated = oracleColumn.IsGenerated
                     };
                     columns.Add(column);
                 }
 
-                const string columnConstraintsQuery = @"
-                        SELECT
-                            COLUMN_NAME,
-                            CONSTRAINT_NAME,
-                            CONSTRAINT_TYPE
-                        FROM ALL_CONSTRAINTS
-                        NATURAL JOIN ALL_CONS_COLUMNS
-                        WHERE TABLE_NAME = :tableName";
-                var columnConstraints = db.Query<OracleConstraint>(columnConstraintsQuery, new { tableName });
+                const string constraintsQuery = @"
+                    SELECT
+                        cc.COLUMN_NAME as ColumnName,
+                        c.CONSTRAINT_NAME as ConstraintName,
+                        c.CONSTRAINT_TYPE as ConstraintType
+                    FROM ALL_CONSTRAINTS c
+                    JOIN ALL_CONS_COLUMNS cc ON c.CONSTRAINT_NAME = cc.CONSTRAINT_NAME AND c.OWNER = cc.OWNER
+                    WHERE c.TABLE_NAME = :tableName AND c.OWNER = :schemaName";
+                var columnConstraints = db.Query<OracleConstraint>(constraintsQuery, new { tableName, schemaName = databaseName });
+                Console.WriteLine($"Oracle constraints query returned {columnConstraints.Count()} constraints for table {tableName} in schema {databaseName}");
                 foreach (var columnConstraint in columnConstraints)
                 {
                     var columnName = columnConstraint.ColumnName;
@@ -173,24 +210,119 @@ namespace DapperCodeGenerator.Core.Providers
 
         protected override Type GetClrType(string dbTypeName, bool isNullable)
         {
-            if (dbTypeName.StartsWith("TIMESTAMP"))
+            var upperTypeName = dbTypeName.ToUpperInvariant();
+
+            if (upperTypeName.StartsWith("TIMESTAMP"))
             {
+                if (upperTypeName.Contains("TIME ZONE"))
+                {
+                    return isNullable ? typeof(DateTimeOffset?) : typeof(DateTimeOffset);
+                }
+
                 return isNullable ? typeof(DateTime?) : typeof(DateTime);
             }
 
-            return dbTypeName switch
+            return upperTypeName switch
             {
-                "INTERVAL YEAR TO MONTH" => isNullable ? typeof(long?) : typeof(long),
-                "BFILE" or "BLOB" or "LONG RAW" => typeof(byte[]),
-                "RAW" => typeof(Guid),
-                "BIT" => isNullable ? typeof(bool?) : typeof(bool),
-                "CHAR" or "CLOB" or "LONG" or "NCHAR" or "NCLOB" or "REF" or "ROWID" or "UROWID" or "VARCHAR2"
-                    or "NVARCHAR2" or "XMLType" => typeof(string),
+                "BOOLEAN" => isNullable ? typeof(bool?) : typeof(bool),
+                "SMALLINT" => isNullable ? typeof(short?) : typeof(short),
+                "INT" or "INTEGER" => isNullable ? typeof(int?) : typeof(int),
+                "BINARY_INTEGER" or "PLS_INTEGER" => isNullable ? typeof(int?) : typeof(int),
+                "BINARY_FLOAT" => isNullable ? typeof(float?) : typeof(float),
+                "BINARY_DOUBLE" => isNullable ? typeof(double?) : typeof(double),
+                "FLOAT" => isNullable ? typeof(decimal?) : typeof(decimal),
+                "NUMBER" => isNullable ? typeof(decimal?) : typeof(decimal),
+
+                "CHAR" or "NCHAR" => typeof(string),
+                "NVARCHAR2" or "VARCHAR2" => typeof(string),
+                "CLOB" or "NCLOB" => typeof(string),
+                "JSON" => typeof(string),
+                "REF" => typeof(string),
+                "ROWID" or "UROWID" => typeof(string),
+                "XMLTYPE" => typeof(string),
+
                 "DATE" => isNullable ? typeof(DateTime?) : typeof(DateTime),
-                "BINARY_DOUBLE" or "BINARY_FLOAT" or "BINARY_INTEGER" or "NUMBER" or "PLS_INTEGER" or "FLOAT" =>
-                    isNullable ? typeof(decimal?) : typeof(decimal),
+                "INTERVAL DAY TO SECOND" or "INTERVAL YEAR TO MONTH" => isNullable ? typeof(TimeSpan?) : typeof(TimeSpan),
+
+                "BFILE" => typeof(byte[]),
+                "BLOB" => typeof(byte[]),
+                "LONG RAW" or "RAW" => typeof(byte[]),
+
+                "SDO_ELEM_INFO_ARRAY" or "SDO_ORDINATE_ARRAY" => typeof(decimal[]),
+
+                "LONG" => typeof(string), // deprecated: use CLOB instead
+
+                // "ANYDATA" or "ANYDATASET" or "ANYTYPE" => typeof(object),
+                // "SDO_GEOMETRY" or "SDO_POINT_TYPE" => typeof(object),
                 _ => typeof(object)
             };
+        }
+
+        private Version GetOracleVersion(OracleConnection connection)
+        {
+            if (_oracleVersion != null)
+            {
+                return _oracleVersion;
+            }
+
+            try
+            {
+                var versionInfo = connection.Query<string>("SELECT banner FROM v$version WHERE ROWNUM = 1").FirstOrDefault();
+                Console.WriteLine($"Oracle version detected: {versionInfo}");
+                if (!string.IsNullOrEmpty(versionInfo))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(versionInfo, @"Release (\d+)\.(\d+)\.(\d+)");
+                    if (match.Success)
+                    {
+                        _oracleVersion = new Version(int.Parse(match.Groups[1].Value), int.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value));
+                        return _oracleVersion;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore
+            }
+
+            _oracleVersion = new Version(11, 0, 0);
+            return _oracleVersion;
+        }
+
+        private static string BuildColumnQuery(Version oracleVersion)
+        {
+            var baseQuery = @"
+                SELECT
+                    COLUMN_NAME as ColumnName,
+                    DATA_TYPE as DataType,
+                    DATA_LENGTH as DataLength,
+                    NULLABLE as Nullable,
+                    DATA_PRECISION as DataPrecision,
+                    DATA_SCALE as DataScale,
+                    DATA_DEFAULT as DataDefault,
+                    COLUMN_ID as ColumnId";
+
+            // Add version-specific columns
+            if (oracleVersion >= new Version(12, 1)) // Identity columns introduced in 12c
+            {
+                baseQuery += @",
+                    CASE WHEN IDENTITY_COLUMN = 'YES' THEN 1
+                         WHEN IDENTITY_COLUMN = 'NO' THEN 0
+                         ELSE null END as IsIdentity";
+            }
+            else
+            {
+                baseQuery += ", null as IsIdentity";
+            }
+
+            // TODO: VIRTUAL_COLUMN?
+            baseQuery += ", null as IsGenerated";
+
+            baseQuery += @"
+                FROM ALL_TAB_COLUMNS
+                WHERE TABLE_NAME = :tableName AND OWNER = :schemaName
+                ORDER BY COLUMN_ID";
+
+            return baseQuery;
         }
     }
 }

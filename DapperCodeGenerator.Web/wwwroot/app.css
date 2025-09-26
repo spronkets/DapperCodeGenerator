@@ -81,3 +81,44 @@ pre code {
 .cursor-pointer {
     cursor: pointer;
 }
+
+.dcg-reconnect-modal > div {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1055;
+        overflow: hidden;
+    }
+    .components-reconnect-hide > div
+    {
+        display: none !important;
+    }
+
+    .components-reconnect-show > div
+    {
+        display: none !important;
+    }
+    .components-reconnect-show > .show
+    {
+        display: flex !important;
+    }
+
+    .components-reconnect-failed > div
+    {
+        display: none !important;
+    }
+    .components-reconnect-failed > .failed
+    {
+        display: flex !important;
+    }
+
+    .components-reconnect-rejected >div
+    {
+        display: none !important;
+    }
+    .components-reconnect-rejected > .rejected
+    {
+        display: flex !important;
+    }

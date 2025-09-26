@@ -9,9 +9,9 @@
             <label for="connectionType" class="fw-semibold mb-1 pe-3">Connection Type</label>
             <select class="form-select" id="connectionType" @onchange="OnChange">
                 <option value="@DbConnectionTypes.MsSql">@DbConnectionTypes.MsSql</option>
-                <option value="@DbConnectionTypes.Postgres">@DbConnectionTypes.Postgres</option>
-                <option value="@DbConnectionTypes.Oracle">@DbConnectionTypes.Oracle</option>
                 <option value="@DbConnectionTypes.MySql">@DbConnectionTypes.MySql</option>
+                <option value="@DbConnectionTypes.Oracle">@DbConnectionTypes.Oracle</option>
+                <option value="@DbConnectionTypes.Postgres">@DbConnectionTypes.Postgres</option>
             </select>
         </div>
         <div class="form-group flex-grow-1">
@@ -20,13 +20,22 @@
                 placeholder="Enter connection string" />
         </div>
         <div>
-            <button type="submit" class="btn btn-primary">Connect</button>
+            <button type="submit" class="btn btn-primary" disabled="@(Model.IsConnecting || Model.IsLoadingTables)">
+                Connect
+            </button>
         </div>
     </div>
 </EditForm>
 
 
-@if (Model.Databases is not null)
+@if (Model.IsConnecting)
+{
+    <div class="mt-4 text-center">
+        <i class="fas fa-spinner fa-spin fa-2x" role="status" aria-label="Loading databases..."></i>
+        <p class="mt-2">Loading databases...</p>
+    </div>
+}
+else if (Model.Databases is not null)
 {
     @if (Model.Databases.Count == 0)
     {
@@ -42,7 +51,7 @@
 
             <div class="row">
                 <div class="col col-lg-4">
-                    <select class="form-select" id="databaseSelect" name="databaseSelect" @onchange="OnDatabaseSelected">
+                    <select class="form-select" id="databaseSelect" name="databaseSelect" @onchange="OnDatabaseSelected" disabled="@Model.IsLoadingTables">
                         <option value="">Select Database...</option>
                         @foreach (var item in Model.Databases)
                         {
@@ -55,16 +64,23 @@
     }
 }
 
-@if (Model.SelectedDatabase is not null)
+@if (Model.IsLoadingTables)
+{
+    <div class="mt-4 text-center">
+        <i class="fas fa-spinner fa-spin fa-2x" role="status" aria-label="Loading tables..."></i>
+        <p class="mt-2">Loading tables...</p>
+    </div>
+}
+else if (Model.SelectedDatabase is not null)
 {
     <div class="mt-3">
-        <div class="d-flex justify-content-end">
+        <div class="d-flex justify-content-end mb-2">
             @if (Model.SelectedDatabase.Tables.Count != 0)
             {
-                <span class="btn-group btn-group-sm float-end">
+                <div class="float-end d-flex gap-2">
                     <GeneratedAllTablesDataModelModal Model="Model.SelectedDatabase.Tables" />
                     <GeneratedAllTablesDapperModal Model="Model.SelectedDatabase" />
-                </span>
+                </div>
             }
         </div>
     </div>
@@ -92,10 +108,10 @@
                         <th class="align-middle" scope="row">@i</th>
                         <td>
                             <span class="align-middle">@table.TableName</span>
-                            <span class="btn-group btn-group-sm float-end">
+                            <div class="float-end d-flex gap-2">
                                 <GeneratedTableDataModelModal Model="table" />
                                 <GeneratedTableDapperModal Model="table" />
-                            </span>
+                            </div>
                         </td>
                     </tr>
                 }
@@ -113,12 +129,28 @@
         Model.ConnectionString = GetDefaultConnectionString(Model.DbConnectionType);
     }
 
-    private void HandleConnect()
+    private async Task HandleConnect()
     {
-        Logger.LogInformation("Database connection type: {DbConnectionType}", Model.DbConnectionType);
-        Logger.LogInformation("Database connection string: {ConnectionString}", Model.ConnectionString);
-        Model.CurrentProvider = GetProvider(Model.DbConnectionType, Model.ConnectionString);
-        Model.Databases = Model.CurrentProvider.RefreshDatabases();
+        Model.IsConnecting = true;
+        Model.Databases = null;
+        Model.SelectedDatabase = null;
+        StateHasChanged();
+
+        try
+        {
+            Logger.LogInformation("Database connection type: {DbConnectionType}", Model.DbConnectionType);
+            Logger.LogInformation("Database connection string: {ConnectionString}", Model.ConnectionString);
+
+            await Task.Delay(50);
+
+            Model.CurrentProvider = GetProvider(Model.DbConnectionType, Model.ConnectionString);
+            Model.Databases = Model.CurrentProvider.RefreshDatabases();
+        }
+        finally
+        {
+            Model.IsConnecting = false;
+            StateHasChanged();
+        }
     }
 
     private void OnChange(ChangeEventArgs e)
@@ -127,13 +159,38 @@
         {
             Model.DbConnectionType = connectionType;
             Model.ConnectionString = GetDefaultConnectionString(connectionType);
+
+            Model.Databases = null;
+            Model.SelectedDatabase = null;
+            Model.CurrentProvider = null;
         }
     }
 
-    private void OnDatabaseSelected(ChangeEventArgs e)
+    private async Task OnDatabaseSelected(ChangeEventArgs e)
     {
         var selectedDatabaseName = e.Value?.ToString();
-        Model.SelectedDatabase = Model.CurrentProvider?.SelectDatabase(Model.Databases, selectedDatabaseName);
+
+        if (string.IsNullOrEmpty(selectedDatabaseName))
+        {
+            Model.SelectedDatabase = null;
+            return;
+        }
+
+        Model.IsLoadingTables = true;
+        Model.SelectedDatabase = null;
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(50);
+
+            Model.SelectedDatabase = Model.CurrentProvider?.SelectDatabase(Model.Databases, selectedDatabaseName);
+        }
+        finally
+        {
+            Model.IsLoadingTables = false;
+            StateHasChanged();
+        }
     }
 
     private string GetDefaultConnectionString(DbConnectionTypes connectionType)
@@ -168,5 +225,7 @@
         public Provider? CurrentProvider { get; set; }
         public List<Database>? Databases { get; set; }
         public Database? SelectedDatabase { get; set; } = null;
+        public bool IsConnecting { get; set; } = false;
+        public bool IsLoadingTables { get; set; } = false;
     }
 }

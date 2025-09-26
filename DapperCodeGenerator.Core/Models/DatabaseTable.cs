@@ -10,7 +10,7 @@ namespace DapperCodeGenerator.Core.Models
         public string DatabaseName { get; set; }
         public string TableName { get; set; }
 
-        public string DataModelName => $"{TableName.CapitalizeFirstLetter().RemovePluralization()}DataModel";
+        public string DataModelName => $"{TableName.ToPascalCase().RemovePluralization()}DataModel";
 
         public List<DatabaseTableColumn> Columns { get; set; } = [];
     }
