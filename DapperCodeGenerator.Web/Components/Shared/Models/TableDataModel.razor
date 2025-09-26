@@ -1,5 +1,5 @@
 <h5>Properties</h5>
-<table class="table table-striped table-bordered table-hover">
+<table class="table table-striped table-bordered table-hover mb-4">
     <thead class="thead-light">
         <tr>
             <th scope="col">#</th>
@@ -48,12 +48,14 @@
         }
     </tbody>
 </table>
+
 <h5 class="d-flex align-items-center gap-2">
     <code id="@modelId-data-model-name">
         @($"{Model?.DataModelName}.cs")
     </code>
-    <CopyButton ID="@($"{modelId}-data-model-name")" Text="Copy" />
+    <CopyButton ID="@($"{modelId}-data-model-name")" Text="Copy Name" />
 </h5>
+
 <pre><code id="@modelId-data-model-code">@DataModelGenerator.GenerateDataModelFromTable(Model)</code></pre>
 <CopyButton ID="@($"{modelId}-data-model-code")" Text="Copy Code" ShowText="true" />
 

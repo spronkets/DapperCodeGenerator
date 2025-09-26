@@ -8,11 +8,6 @@ namespace DapperCodeGenerator.Core.Extensions
 {
     public static class TableColumnExtensions
     {
-        public static string GetColumnNameAsParameter(this DatabaseTableColumn tableColumn)
-        {
-            return $"{char.ToLowerInvariant(tableColumn.ColumnName[0])}{tableColumn.ColumnName.Substring(1)}";
-        }
-
         public static string GetMethodParameters(this IEnumerable<DatabaseTableColumn> tableColumns, bool parametersAreOptional = false)
         {
             var methodParametersBuilder = new StringBuilder();
@@ -28,7 +23,7 @@ namespace DapperCodeGenerator.Core.Extensions
                     columnCodingType += "?";
                 }
 
-                methodParametersBuilder.Append($"{columnCodingType} {column.GetColumnNameAsParameter()}");
+                methodParametersBuilder.Append($"{columnCodingType} {column.ColumnName.ToCamelCase()}");
                 
                 if (i < tableColumnsCount - 1)
                 {
@@ -47,7 +42,7 @@ namespace DapperCodeGenerator.Core.Extensions
             for (var i = 0; i < tableColumnsCount; i++)
             {
                 var column = tableColumns.ElementAt(i);
-                var columnNameAsParameter = column.GetColumnNameAsParameter();
+                var columnNameAsParameter = column.ColumnName.ToCamelCase();
                 
                 if (parametersAreOptional)
                 {
@@ -80,7 +75,7 @@ namespace DapperCodeGenerator.Core.Extensions
             for (var i = 0; i < tableColumnsCount; i++)
             {
                 var column = tableColumns.ElementAt(i);
-                var columnNameAsParameter = column.GetColumnNameAsParameter();
+                var columnNameAsParameter = column.ColumnName.ToCamelCase();
 
                 sqlBuilder.Append($"{dbParameterCharacter}{columnNameAsParameter}");
 
@@ -95,7 +90,7 @@ namespace DapperCodeGenerator.Core.Extensions
 
         public static string GetDapperProperties(this IEnumerable<DatabaseTableColumn> tableColumns)
         {
-            return string.Join(", ", tableColumns.Select(tc => tc.GetColumnNameAsParameter()));
+            return string.Join(", ", tableColumns.Select(tc => tc.ColumnName.ToCamelCase()));
         }
     }
 }

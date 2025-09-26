@@ -35,7 +35,7 @@ namespace DapperCodeGenerator.Core.Generators
 
             foreach (var column in table.Columns)
             {
-                stringBuilder.AppendLine($"\tpublic {column.Type.GetNameForCoding()} {column.ColumnName.ToPascalCase()} {{ get; set; }}");
+                stringBuilder.AppendLine($"{PadBy(1)}public {column.Type.GetNameForCoding()} {column.ColumnName.ToPascalCase()} {{ get; set; }}");
             }
 
             stringBuilder.AppendLine("}");
@@ -43,6 +43,11 @@ namespace DapperCodeGenerator.Core.Generators
             stringBuilder.AppendLine();
 
             return stringBuilder.ToString();
+        }
+
+        private static string PadBy(int quantity, bool useSpaces = true, int spacesMultiplier = 4)
+        {
+            return (useSpaces ? " ".Repeat(spacesMultiplier) : "\t").Repeat(quantity);
         }
     }
 }

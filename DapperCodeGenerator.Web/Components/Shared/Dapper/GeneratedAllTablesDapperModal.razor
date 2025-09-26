@@ -1,6 +1,8 @@
-﻿<Modal>
+﻿@using DapperCodeGenerator.Core.Generators
+
+<Modal>
     <Trigger Context="modalId">
-        <button type="button" class="btn btn-sm btn-warning" title="All @Model?.DatabaseName Database Dapper"
+        <button type="button" class="btn btn-sm btn-warning" title="All @Model.DatabaseName Database Dapper"
             data-bs-toggle="modal" data-bs-target="#@modalId">
             All Dapper
         </button>
@@ -8,7 +10,7 @@
 
     <Header>
         <h5 class="modal-title align-content-center">
-            <span class="fw-semibold">Database:</span> @Model?.DatabaseName
+            <span class="fw-semibold">Database:</span> @Model.DatabaseName
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" height="24" width="24"
                 stroke-width="1.5" stroke="currentColor" class="">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -19,30 +21,41 @@
     </Header>
 
     <Body>
-        <div class="alert alert-info" role="alert">
-            <label for="alt-generators">Alternatives:</label>
-            <ul id="alt-generators">
-                <li><a href="https://github.com/MoonStorm/Dapper.FastCRUD">FastCRUD</a></li>
-                <li><a href="https://github.com/ericdc1/Dapper.SimpleCRUD">SimpleCRUD</a></li>
+        <div class="alert alert-success" role="alert">
+            This Dapper code is generated with @Model.ConnectionType-specific syntax for optimal compatibility.
+        </div>
+
+        <div class="alert alert-info mb-4" role="alert">
+            <label for="alt-generators">Some Dapper CRUD Alternatives:</label>
+            <ul id="alt-generators" class="mb-0">
+                <li><a href="https://github.com/RightCrowd/Dapper.FastCRUD">Dapper.FastCRUD</a> - Fast, many features</li>
+                <li><a href="https://github.com/ericdc1/Dapper.SimpleCRUD">Dapper.SimpleCRUD</a> - Simple, lightweight</li>
+                <li><a href="https://github.com/ffhighwind/DapperExtraCRUD">DapperExtraCRUD</a> - Bulk operations, advanced features</li>
+                <li><a href="https://github.com/tmsmith/Dapper-Extensions">Dapper-Extensions</a> - Predicate-based queries</li>
             </ul>
         </div>
+
         <h5 class="d-flex align-items-center gap-2">
             <code id="@modalId-data-name">
-                @($"{Model?.DatabaseName}Repository.cs")
+                @($"{Model.DatabaseName.ToPascalCase()}Repository.cs")
             </code>
-            <CopyButton ID="@($"{modalId}-data-name")" />
+            <CopyButton ID="@($"{modalId}-data-name")" Text="Copy Name" />
         </h5>
-        <div class="alert alert-warning" role="alert">
-            This Dapper code is written using T-SQL syntax and might not be compatible with Postgres, Oracle, and MySQL
-        </div>
-        <pre><code id="@modalId-data-code">@DapperGenerator.GenerateDapperFromDatabase(Model)</code></pre>
-        <CopyButton ID="@($"{modalId}-data-code")" Text="Copy Code" />
+        
+        <pre><code id="@modalId-data-code">@GetDapperCode()</code></pre>
+        <CopyButton ID="@($"{modalId}-data-code")" Text="Copy Code" ShowText="true" />
     </Body>
 </Modal>
 
 @code {
+    [Parameter, EditorRequired]
+    public required Database Model { get; set; }
 
-    [Parameter]
-    public Database? Model { get; set; } = default!;
     private string modalId = $"dapper-modal-{Guid.NewGuid()}";
+
+    private string GetDapperCode()
+    {
+        var generator = DapperGeneratorFactory.GetGenerator(Model.ConnectionType);
+        return generator.GenerateDapperFromDatabase(Model);
+    }
 }
