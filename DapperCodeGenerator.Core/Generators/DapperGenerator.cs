@@ -1,4 +1,4 @@
-using System.Linq;
+using System.Collections.Generic;
 using System.Text;
 using DapperCodeGenerator.Core.Extensions;
 using DapperCodeGenerator.Core.Models;
@@ -8,6 +8,13 @@ namespace DapperCodeGenerator.Core.Generators
     public abstract class DapperGenerator
     {
         protected const string ConnectionStringPlaceholder = "\"<ConnectionString>\"";
+
+        protected abstract string GetParameterMarker();
+        protected abstract string QuoteIdentifier(string identifier);
+        protected abstract string BuildWhereClause(IEnumerable<DatabaseTableColumn> columns, bool parametersAreOptional = false);
+        protected abstract string BuildSetClause(IEnumerable<DatabaseTableColumn> columns);
+        protected abstract string FormatColumnList(IEnumerable<DatabaseTableColumn> columns);
+        protected abstract string BuildParameterList(IEnumerable<DatabaseTableColumn> columns);
 
         protected abstract void GenerateGetMethods(StringBuilder stringBuilder, DatabaseTable table);
         protected abstract void GenerateFindMethods(StringBuilder stringBuilder, DatabaseTable table);

@@ -34,59 +34,6 @@ namespace DapperCodeGenerator.Core.Extensions
             return methodParametersBuilder.ToString();
         }
         
-        public static string GetSqlWhereClauses(this IEnumerable<DatabaseTableColumn> tableColumns, string dbParameterCharacter = "@", bool parametersAreOptional = false)
-        {
-            var sqlBuilder = new StringBuilder();
-
-            var tableColumnsCount = tableColumns.Count();
-            for (var i = 0; i < tableColumnsCount; i++)
-            {
-                var column = tableColumns.ElementAt(i);
-                var columnNameAsParameter = column.ColumnName.ToCamelCase();
-                
-                if (parametersAreOptional)
-                {
-                    sqlBuilder.Append($"({dbParameterCharacter}{columnNameAsParameter} IS NULL OR {column.ColumnName} = {dbParameterCharacter}{columnNameAsParameter})");
-                }
-                else
-                {
-                    sqlBuilder.Append($"{column.ColumnName} = {dbParameterCharacter}{columnNameAsParameter}");
-                }
-                
-                if (i < tableColumnsCount - 1)
-                {
-                    sqlBuilder.Append(", ");
-                }
-            }
-
-            return sqlBuilder.ToString();
-        }
-
-        public static string GetColumnNames(this IEnumerable<DatabaseTableColumn> tableColumns)
-        {
-            return string.Join(", ", tableColumns.Select(tc => tc.ColumnName));
-        }
-
-        public static string GetSqlInsertValues(this IEnumerable<DatabaseTableColumn> tableColumns, string dbParameterCharacter = "@")
-        {
-            var sqlBuilder = new StringBuilder();
-
-            var tableColumnsCount = tableColumns.Count();
-            for (var i = 0; i < tableColumnsCount; i++)
-            {
-                var column = tableColumns.ElementAt(i);
-                var columnNameAsParameter = column.ColumnName.ToCamelCase();
-
-                sqlBuilder.Append($"{dbParameterCharacter}{columnNameAsParameter}");
-
-                if (i < tableColumnsCount - 1)
-                {
-                    sqlBuilder.Append(", ");
-                }
-            }
-
-            return sqlBuilder.ToString();
-        }
 
         public static string GetDapperProperties(this IEnumerable<DatabaseTableColumn> tableColumns)
         {
