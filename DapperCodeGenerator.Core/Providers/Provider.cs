@@ -8,14 +8,16 @@ namespace DapperCodeGenerator.Core.Providers
     public abstract class Provider(string connectionString)
     {
         public string ConnectionString { get; } = connectionString;
+        public string LastConnectionError { get; protected set; }
 
-        public List<Database> RefreshDatabases()
+        public List<Database> RefreshDatabases(bool filterSystemObjects)
         {
-            var databases = GetDatabases().ToList();
+            LastConnectionError = null;
+            var databases = GetDatabases(filterSystemObjects).ToList();
             return databases;
         }
 
-        public Database SelectDatabase(List<Database> databases, string databaseName)
+        public Database SelectDatabase(List<Database> databases, string databaseName, bool filterSystemObjects)
         {
             var database = databases.SingleOrDefault(d => d.DatabaseName == databaseName);
 
@@ -24,7 +26,7 @@ namespace DapperCodeGenerator.Core.Providers
                 return null;
             }
 
-            database.Tables = [.. GetDatabaseTables(databaseName)];
+            database.Tables = [.. GetDatabaseTables(databaseName, filterSystemObjects)];
 
             foreach (var table in database.Tables)
             {
@@ -34,9 +36,9 @@ namespace DapperCodeGenerator.Core.Providers
             return database;
         }
 
-        protected abstract IEnumerable<Database> GetDatabases();
+        protected abstract IEnumerable<Database> GetDatabases(bool filterSystemObjects);
 
-        protected abstract IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName);
+        protected abstract IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName, bool filterSystemObjects);
 
         protected abstract IEnumerable<DatabaseTableColumn> GetDatabaseTableColumns(string databaseName, string tableName);
 

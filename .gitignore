@@ -289,3 +289,6 @@ __pycache__/
 
 # Oracle Files
 *.ora
+
+# Local configuration files
+appsettings.local.json

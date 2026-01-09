@@ -54,7 +54,7 @@ namespace DapperCodeGenerator.Core.Providers
         private readonly OracleConnectionStringBuilder _connectionStringBuilder = new(connectionString);
         private Version _oracleVersion;
 
-        protected override IEnumerable<Database> GetDatabases()
+        protected override IEnumerable<Database> GetDatabases(bool filterSystemObjects)
         {
             try
             {
@@ -67,9 +67,14 @@ namespace DapperCodeGenerator.Core.Providers
                     FROM ALL_USERS
                     ORDER BY USERNAME";
 
-                var schemas = db.Query<OracleSchema>(databasesQuery)
-                    .Where(schema => !_systemDatabases.Any(d => d.Equals(schema.SchemaName, StringComparison.InvariantCultureIgnoreCase)));
-                Console.WriteLine($"Oracle databases query returned {schemas.Count()} filtered schemas");
+                var schemas = db.Query<OracleSchema>(databasesQuery);
+
+                if (filterSystemObjects)
+                {
+                    schemas = schemas.Where(schema => !_systemDatabases.Any(d => d.Equals(schema.SchemaName, StringComparison.InvariantCultureIgnoreCase)));
+                }
+
+                Console.WriteLine($"Oracle databases query returned {schemas.Count()} {(filterSystemObjects ? "filtered" : "")} schemas");
                 return schemas.Select(schema => new Database
                 {
                     ConnectionType = DbConnectionTypes.Oracle,
@@ -78,31 +83,43 @@ namespace DapperCodeGenerator.Core.Providers
             }
             catch (Exception exc)
             {
+                LastConnectionError = exc.Message;
                 Console.Error.WriteLine(exc.Message, exc);
                 return [];
             }
         }
 
-        protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName)
+        protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName, bool filterSystemObjects)
         {
             try
             {
                 using var db = new OracleConnection($"{_connectionStringBuilder}");
 
-                const string tablesQuery = @"
-                    SELECT DISTINCT
+                var tablesQuery = filterSystemObjects
+                    ? @"SELECT DISTINCT
                         OBJECT_NAME as TableName
-                    FROM ALL_OBJECTS
-                    WHERE
-                        OBJECT_TYPE = 'TABLE' AND
-                        OWNER = :schemaName AND
-                        GENERATED = 'N' AND
-                        SECONDARY = 'N' AND
-                        OBJECT_NAME NOT LIKE 'BIN$%'";
+                        FROM ALL_OBJECTS
+                        WHERE
+                            OBJECT_TYPE = 'TABLE' AND
+                            OWNER = :schemaName AND
+                            GENERATED = 'N' AND
+                            SECONDARY = 'N' AND
+                            OBJECT_NAME NOT LIKE 'BIN$%'"
+                    : @"SELECT DISTINCT
+                        OBJECT_NAME as TableName
+                        FROM ALL_OBJECTS
+                        WHERE
+                            OBJECT_TYPE = 'TABLE' AND
+                            OWNER = :schemaName";
 
-                var tables = db.Query<DatabaseTable>(tablesQuery, new { schemaName = databaseName })
-                    .Where(table => !_systemTablePatterns.Any(pattern => Regex.IsMatch(table.TableName, pattern, RegexOptions.IgnoreCase)));
-                Console.WriteLine($"Oracle tables query returned {tables.Count()} filtered tables for schema {databaseName}");
+                var tables = db.Query<DatabaseTable>(tablesQuery, new { schemaName = databaseName });
+
+                if (filterSystemObjects)
+                {
+                    tables = tables.Where(table => !_systemTablePatterns.Any(pattern => Regex.IsMatch(table.TableName, pattern, RegexOptions.IgnoreCase)));
+                }
+
+                Console.WriteLine($"Oracle tables query returned {tables.Count()} {(filterSystemObjects ? "filtered" : "")} tables for schema {databaseName}");
                 return tables.Select(table =>
                 {
                     table.ConnectionType = DbConnectionTypes.Oracle;

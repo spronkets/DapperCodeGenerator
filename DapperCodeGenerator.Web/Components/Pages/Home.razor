@@ -1,5 +1,6 @@
-﻿@page "/"
+@page "/"
 @inject ILogger<Home> Logger
+@inject IConfiguration Configuration
 
 <PageTitle>Home</PageTitle>
 
@@ -25,6 +26,15 @@
             </button>
         </div>
     </div>
+    <div class="mt-2 d-flex gap-3 align-items-center">
+        <label class="fw-semibold mb-0">Filters</label>
+        <div class="form-check mb-0">
+            <InputCheckbox class="form-check-input" id="filterSystemObjects" @bind-Value="Model.FilterSystemObjects" />
+            <label class="form-check-label" for="filterSystemObjects">
+                Hide System Objects
+            </label>
+        </div>
+    </div>
 </EditForm>
 
 
@@ -39,10 +49,27 @@ else if (Model.Databases is not null)
 {
     @if (Model.Databases.Count == 0)
     {
-        <div class="mt-5 alert alert-warning" role="alert">
-            No databases found. If you know the server you are connecting to has databases, this may be due to an invalid
-            connection string.
-        </div>
+        @if (!string.IsNullOrEmpty(Model.CurrentProvider?.LastConnectionError))
+        {
+            <div class="mt-5 alert alert-danger" role="alert">
+                <h5 class="alert-heading">
+                    <i class="fas fa-circle-xmark"></i> Connection Failed
+                </h5>
+                <p>Unable to connect to the database server. Please check your connection string and ensure the server is running.</p>
+                <div class="p-3 bg-light border rounded">
+                    <small class="font-monospace text-break">@Model.CurrentProvider.LastConnectionError</small>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="mt-5 alert alert-warning" role="alert">
+                <h5 class="alert-heading">
+                    <i class="fas fa-exclamation-circle"></i> No Databases Found
+                </h5>
+                <p>No databases found. If you know the server you are connecting to has databases, this may be due to an invalid connection string or it is being filtered.</p>
+            </div>
+        }
     }
     else
     {
@@ -144,7 +171,7 @@ else if (Model.SelectedDatabase is not null)
             await Task.Delay(50);
 
             Model.CurrentProvider = GetProvider(Model.DbConnectionType, Model.ConnectionString);
-            Model.Databases = Model.CurrentProvider.RefreshDatabases();
+            Model.Databases = Model.CurrentProvider.RefreshDatabases(Model.FilterSystemObjects);
         }
         finally
         {
@@ -184,7 +211,7 @@ else if (Model.SelectedDatabase is not null)
         {
             await Task.Delay(50);
 
-            Model.SelectedDatabase = Model.CurrentProvider?.SelectDatabase(Model.Databases, selectedDatabaseName);
+            Model.SelectedDatabase = Model.CurrentProvider?.SelectDatabase(Model.Databases, selectedDatabaseName, Model.FilterSystemObjects);
         }
         finally
         {
@@ -195,14 +222,7 @@ else if (Model.SelectedDatabase is not null)
 
     private string GetDefaultConnectionString(DbConnectionTypes connectionType)
     {
-        return connectionType switch
-        {
-            DbConnectionTypes.MsSql => "Data Source=localhost;Integrated Security=True;TrustServerCertificate=True;",
-            DbConnectionTypes.MySql => "Server=127.0.0.1;Port=3306;User Id=root;Password=mysql;",
-            DbConnectionTypes.Postgres => "Server=localhost;Port=5432;User Id=postgres;Password=postgres;",
-            DbConnectionTypes.Oracle => "Data Source=127.0.0.1:1521/xe;User Id=oracle;Password=oracle;",
-            _ => throw new NotSupportedException($"{connectionType} is not supported.")
-        };
+        return Configuration.GetConnectionString(connectionType.ToString()) ?? "";
     }
 
     private Provider GetProvider(DbConnectionTypes connectionType, string connectionString)
@@ -227,5 +247,6 @@ else if (Model.SelectedDatabase is not null)
         public Database? SelectedDatabase { get; set; } = null;
         public bool IsConnecting { get; set; } = false;
         public bool IsLoadingTables { get; set; } = false;
+        public bool FilterSystemObjects { get; set; } = true;
     }
 }

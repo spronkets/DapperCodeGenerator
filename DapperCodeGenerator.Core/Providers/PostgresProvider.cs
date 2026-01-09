@@ -39,7 +39,7 @@ namespace DapperCodeGenerator.Core.Providers
 
         private readonly NpgsqlConnectionStringBuilder _connectionStringBuilder = new(connectionString) { Database = "" };
 
-        protected override IEnumerable<Database> GetDatabases()
+        protected override IEnumerable<Database> GetDatabases(bool filterSystemObjects)
         {
             try
             {
@@ -50,9 +50,14 @@ namespace DapperCodeGenerator.Core.Providers
                     FROM pg_database
                     WHERE datistemplate = false";
 
-                var databases = db.Query<Database>(databasesQuery)
-                    .Where(database => !_systemDatabases.Any(d => d.Equals(database.DatabaseName, StringComparison.InvariantCultureIgnoreCase)));
-                Console.WriteLine($"PostgreSQL databases query returned {databases.Count()} filtered databases");
+                var databases = db.Query<Database>(databasesQuery);
+
+                if (filterSystemObjects)
+                {
+                    databases = databases.Where(database => !_systemDatabases.Any(d => d.Equals(database.DatabaseName, StringComparison.InvariantCultureIgnoreCase)));
+                }
+
+                Console.WriteLine($"PostgreSQL databases query returned {databases.Count()} {(filterSystemObjects ? "filtered" : "")} databases");
                 return databases.Select(database =>
                 {
                     database.ConnectionType = DbConnectionTypes.Postgres;
@@ -61,29 +66,38 @@ namespace DapperCodeGenerator.Core.Providers
             }
             catch (Exception exc)
             {
+                LastConnectionError = exc.Message;
                 Console.Error.WriteLine(exc.Message, exc);
                 return [];
             }
         }
 
-        protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName)
+        protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName, bool filterSystemObjects)
         {
             try
             {
                 using var db = new NpgsqlConnection($"{_connectionStringBuilder};Database={databaseName};");
 
-                const string tablesQuery = @"
-                    SELECT table_name as TableName
-                    FROM information_schema.tables
-                    WHERE table_type = 'BASE TABLE'
-                        AND table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-                        AND table_schema !~ '^pg_temp_'
-                        AND table_schema !~ '^pg_toast_temp_'
-                        AND table_schema = 'public'";
+                var tablesQuery = filterSystemObjects
+                    ? @"SELECT table_name as TableName
+                        FROM information_schema.tables
+                        WHERE table_type = 'BASE TABLE'
+                            AND table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+                            AND table_schema !~ '^pg_temp_'
+                            AND table_schema !~ '^pg_toast_temp_'
+                            AND table_schema = 'public'"
+                    : @"SELECT table_name as TableName
+                        FROM information_schema.tables
+                        WHERE table_type = 'BASE TABLE'";
 
-                var tables = db.Query<DatabaseTable>(tablesQuery)
-                    .Where(table => !_systemTables.Any(t => table.TableName.StartsWith(t)));
-                Console.WriteLine($"PostgreSQL tables query returned {tables.Count()} filtered tables for database {databaseName}");
+                var tables = db.Query<DatabaseTable>(tablesQuery);
+
+                if (filterSystemObjects)
+                {
+                    tables = tables.Where(table => !_systemTables.Any(t => table.TableName.StartsWith(t)));
+                }
+
+                Console.WriteLine($"PostgreSQL tables query returned {tables.Count()} {(filterSystemObjects ? "filtered" : "")} tables for database {databaseName}");
                 return tables.Select(table =>
                 {
                     table.ConnectionType = DbConnectionTypes.Postgres;

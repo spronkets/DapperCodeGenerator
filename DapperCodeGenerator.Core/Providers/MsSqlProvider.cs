@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using DapperCodeGenerator.Core.Enumerations;
 using DapperCodeGenerator.Core.Models;
 using Microsoft.Data.SqlClient;
@@ -37,18 +37,22 @@ namespace DapperCodeGenerator.Core.Providers
 
         private readonly SqlConnectionStringBuilder _connectionStringBuilder = new(connectionString) { InitialCatalog = "" };
 
-        protected override IEnumerable<Database> GetDatabases()
+        protected override IEnumerable<Database> GetDatabases(bool filterSystemObjects)
         {
             try
             {
                 using var db = new SqlConnection($"{_connectionStringBuilder}");
 
-                const string databasesQuery = @"
-                    SELECT name as DatabaseName
-                    FROM sys.databases
-                    WHERE state = 0
-                      AND database_id > 4  -- Excludes master(1), tempdb(2), model(3), msdb(4)
-                      AND is_read_only = 0";
+                var databasesQuery = filterSystemObjects
+                    ? @"SELECT name as DatabaseName
+                        FROM sys.databases
+                        WHERE state = 0
+                          AND database_id > 4  -- Excludes master(1), tempdb(2), model(3), msdb(4)
+                          AND is_read_only = 0"
+                    : @"SELECT name as DatabaseName
+                        FROM sys.databases
+                        WHERE state = 0
+                          AND is_read_only = 0";
 
                 var databases = db.Query<Database>(databasesQuery);
                 Console.WriteLine($"MS SQL databases query returned {databases.Count()} databases");
@@ -60,12 +64,13 @@ namespace DapperCodeGenerator.Core.Providers
             }
             catch (Exception exc)
             {
+                LastConnectionError = exc.Message;
                 Console.Error.WriteLine(exc.Message, exc);
                 return [];
             }
         }
 
-        protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName)
+        protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName, bool filterSystemObjects)
         {
             try
             {
@@ -76,9 +81,14 @@ namespace DapperCodeGenerator.Core.Providers
                     FROM INFORMATION_SCHEMA.TABLES
                     WHERE TABLE_TYPE = 'BASE TABLE'";
 
-                var tables = db.Query<DatabaseTable>(tablesQuery)
-                    .Where(table => !_systemTables.Any(t => t.Equals(table.TableName, StringComparison.InvariantCultureIgnoreCase)));
-                Console.WriteLine($"MS SQL tables query returned {tables.Count()} filtered tables for database {databaseName}");
+                var tables = db.Query<DatabaseTable>(tablesQuery);
+
+                if (filterSystemObjects)
+                {
+                    tables = tables.Where(table => !_systemTables.Any(t => t.Equals(table.TableName, StringComparison.InvariantCultureIgnoreCase)));
+                }
+
+                Console.WriteLine($"MS SQL tables query returned {tables.Count()} {(filterSystemObjects ? "filtered" : "")} tables for database {databaseName}");
                 return tables.Select(table =>
                 {
                     table.ConnectionType = DbConnectionTypes.MsSql;
@@ -100,7 +110,7 @@ namespace DapperCodeGenerator.Core.Providers
             try
             {
                 using var db = new SqlConnection($"{_connectionStringBuilder};Initial Catalog={databaseName};");
-                
+
                 const string columnsQuery = @"
                     SELECT
                         c.COLUMN_NAME as ColumnName,

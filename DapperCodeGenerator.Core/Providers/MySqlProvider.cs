@@ -37,7 +37,7 @@ namespace DapperCodeGenerator.Core.Providers
 
         private readonly MySqlConnectionStringBuilder _connectionStringBuilder = new(connectionString);
 
-        protected override IEnumerable<Database> GetDatabases()
+        protected override IEnumerable<Database> GetDatabases(bool filterSystemObjects)
         {
             try
             {
@@ -47,9 +47,14 @@ namespace DapperCodeGenerator.Core.Providers
                     SELECT SCHEMA_NAME as DatabaseName
                     FROM information_schema.SCHEMATA";
 
-                var databases = db.Query<Database>(databasesQuery)
-                    .Where(database => !_systemDatabases.Any(d => d.Equals(database.DatabaseName, StringComparison.InvariantCultureIgnoreCase)));
-                Console.WriteLine($"MySQL databases query returned {databases.Count()} filtered databases");
+                var databases = db.Query<Database>(databasesQuery);
+
+                if (filterSystemObjects)
+                {
+                    databases = databases.Where(database => !_systemDatabases.Any(d => d.Equals(database.DatabaseName, StringComparison.InvariantCultureIgnoreCase)));
+                }
+
+                Console.WriteLine($"MySQL databases query returned {databases.Count()} {(filterSystemObjects ? "filtered" : "")} databases");
                 return databases.Select(database =>
                 {
                     database.ConnectionType = DbConnectionTypes.MySql;
@@ -58,12 +63,13 @@ namespace DapperCodeGenerator.Core.Providers
             }
             catch (Exception exc)
             {
+                LastConnectionError = exc.Message;
                 Console.Error.WriteLine(exc.Message, exc);
                 return [];
             }
         }
 
-        protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName)
+        protected override IEnumerable<DatabaseTable> GetDatabaseTables(string databaseName, bool filterSystemObjects)
         {
             try
             {
@@ -75,9 +81,14 @@ namespace DapperCodeGenerator.Core.Providers
                     WHERE TABLE_TYPE = 'BASE TABLE'
                         AND TABLE_SCHEMA = @schema";
 
-                var tables = db.Query<DatabaseTable>(tablesQuery, new { schema = databaseName })
-                    .Where(table => !_systemTables.Any(t => t.Equals(table.TableName, StringComparison.InvariantCultureIgnoreCase)));
-                Console.WriteLine($"MySQL tables query returned {tables.Count()} filtered tables for database {databaseName}");
+                var tables = db.Query<DatabaseTable>(tablesQuery, new { schema = databaseName });
+
+                if (filterSystemObjects)
+                {
+                    tables = tables.Where(table => !_systemTables.Any(t => t.Equals(table.TableName, StringComparison.InvariantCultureIgnoreCase)));
+                }
+
+                Console.WriteLine($"MySQL tables query returned {tables.Count()} {(filterSystemObjects ? "filtered" : "")} tables for database {databaseName}");
                 return tables.Select(table =>
                 {
                     table.ConnectionType = DbConnectionTypes.MySql;
